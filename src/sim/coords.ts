@@ -13,12 +13,16 @@ export const V3 = (x: number, y: number, z: number) => new Vector3(x, y, z);
 export const DIR = (deg: number) => V3(Math.sin(deg * D2R), 0, Math.cos(deg * D2R));
 
 export const subjP = (s: SimState) => V3(s.subj.x, 0, s.subj.z);
+/** 조명·카메라 위치 기준(고정 스테이지 앵커). 피사체 이동과 무관. */
+export const stageP = (s: SimState) => V3(s.stage.x, 0, s.stage.z);
 export const axisDeg = (s: SimState) => s.subj.yaw + s.cam.az;
-export const camP = (s: SimState) => subjP(s).addScaledVector(DIR(axisDeg(s)), s.cam.dist).setY(s.cam.h);
+/** 카메라 위치는 스테이지 앵커 기준(고정), 조준은 피사체(faceC) */
+export const camP = (s: SimState) => stageP(s).addScaledVector(DIR(axisDeg(s)), s.cam.dist).setY(s.cam.h);
 export const faceC = (s: SimState) => V3(s.subj.x, s.subj.eyeH, s.subj.z);
 export const normalAt = (s: SimState, d: number) => DIR(s.subj.yaw + d);
+/** 조명 위치는 스테이지 앵커 기준(고정), 조준은 피사체(faceC)/배경 */
 export const lightVec = (s: SimState, L: LightState) =>
-  subjP(s).addScaledVector(DIR(axisDeg(s) + L.az), L.dist).setY(L.h);
+  stageP(s).addScaledVector(DIR(axisDeg(s) + L.az), L.dist).setY(L.h);
 
 export interface Wall {
   origin: Vector3;

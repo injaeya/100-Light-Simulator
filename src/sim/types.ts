@@ -111,4 +111,10 @@ export interface SimState {
   env: EnvState;
   wins: WinState[];
   lights: LightState[];
+  /**
+   * 고정 스테이지 앵커(월드 XZ). 조명·카메라 위치의 기준점.
+   * 피사체를 옮겨도 이 값은 유지되어 조명/카메라가 제자리에 고정된다.
+   * 공간/프리셋 적용 시 피사체 홈 위치로 설정된다.
+   */
+  stage: { x: number; z: number };
 }

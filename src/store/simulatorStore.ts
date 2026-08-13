@@ -51,6 +51,7 @@ function makeInitialState(): SimState {
     env: { ...space.env },
     wins: withIds<WinState>(space.wins()),
     lights: withIds<LightState>(lp.lights),
+    stage: { x: space.subj.x, z: space.subj.z },
   };
   const fit = fitExposure(base);
   base.expo.nd = fit.nd;
@@ -231,6 +232,7 @@ export const useSimulatorStore = create<Store>((set) => ({
         env: { ...P.env },
         subj: { ...P.subj },
         wins: withIds<WinState>(P.wins()),
+        stage: { x: P.subj.x, z: P.subj.z },
       };
       clampPlacement(base);
       const fit = fitExposure(base);
@@ -239,6 +241,7 @@ export const useSimulatorStore = create<Store>((set) => ({
         env: base.env,
         subj: base.subj,
         wins: base.wins,
+        stage: base.stage,
         expo: { ...s.expo, nd: fit.nd, f: fit.f },
         spaceKey: key,
         selectedWinId: null,
@@ -268,5 +271,5 @@ export const useSimulatorStore = create<Store>((set) => ({
 
 /** 셀렉터 헬퍼: 현재 SimState만 추출 */
 export function pickSimState(s: Store): SimState {
-  return { cam: s.cam, expo: s.expo, subj: s.subj, room: s.room, env: s.env, wins: s.wins, lights: s.lights };
+  return { cam: s.cam, expo: s.expo, subj: s.subj, room: s.room, env: s.env, wins: s.wins, lights: s.lights, stage: s.stage };
 }

@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Object3D, type DirectionalLight, type SpotLight } from 'three';
 import { bgPoint, faceC, lightVec } from '../../sim/coords';
-import { DEFAULT_ANGLE, MOD_ANGLE } from '../../sim/modifiers';
+import { lightQuality } from '../../sim/modifiers';
 import { FIXTURES } from '../../sim/fixtures';
 import { kelvinCSS, wbFactor } from '../../sim/kelvin';
 import { effCd, effSize, type Analysis } from '../../sim/photometry';
@@ -44,10 +44,13 @@ function FixtureLight({
   const target = useTarget([t.x, t.y, t.z]);
   const cd = effCd(L);
   const kind = FIXTURES[L.fix].kind;
-  const [angle, penumbra] = MOD_ANGLE[L.mod] || DEFAULT_ANGLE;
+  // 조명 종류(모디파이어)별 광질: 빔 각도·엣지 부드러움·그림자 경도
+  const q = lightQuality(L.mod);
+  const angle = q.angle;
+  const penumbra = q.penumbra;
   const wf = wbFactor(L.kelvin, sim.expo.wb);
   const col = lin(wf.r, wf.g, wf.b);
-  const shadowRadius = Math.min(18, Math.max(0.6, (effSize(L) / Math.max(0.3, L.dist)) * 13));
+  const shadowRadius = Math.min(24, Math.max(0.5, (effSize(L) / Math.max(0.3, L.dist)) * 13 * q.softness));
 
   useEffect(() => {
     if (ref.current) ref.current.target = target;

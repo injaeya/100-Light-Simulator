@@ -33,9 +33,10 @@ function ShotCamera({ sim }: { sim: SimState }) {
   const cam = useThree((s) => s.camera);
   const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
-    const cp = camP(sim), fc = faceC(sim);
+    const cp = camP(sim);
     cam.position.set(cp.x, cp.y, cp.z);
-    cam.lookAt(fc.x, fc.y, fc.z);
+    // 조준은 스테이지 앵커(고정) — 프레임을 고정해 방·조명이 안 움직이고 피사체만 이동
+    cam.lookAt(sim.stage.x, sim.subj.eyeH, sim.stage.z);
     if (cam instanceof ThreePerspectiveCamera) {
       cam.fov = (2 * Math.atan(10.125 / sim.cam.focal) * 180) / Math.PI;
     }

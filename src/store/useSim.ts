@@ -13,5 +13,6 @@ export function useSim(): SimState {
   const env = useSimulatorStore((s) => s.env);
   const wins = useSimulatorStore((s) => s.wins);
   const lights = useSimulatorStore((s) => s.lights);
-  return useMemo(() => ({ cam, expo, subj, room, env, wins, lights }), [cam, expo, subj, room, env, wins, lights]);
+  const stage = useSimulatorStore((s) => s.stage);
+  return useMemo(() => ({ cam, expo, subj, room, env, wins, lights, stage }), [cam, expo, subj, room, env, wins, lights, stage]);
 }
