@@ -7,11 +7,12 @@ import { Object3D, type DirectionalLight, type SpotLight } from 'three';
 import { bgPoint, faceC, lightVec } from '../../sim/coords';
 import { DEFAULT_ANGLE, MOD_ANGLE } from '../../sim/modifiers';
 import { FIXTURES } from '../../sim/fixtures';
-import { wbFactor } from '../../sim/kelvin';
+import { kelvinCSS, wbFactor } from '../../sim/kelvin';
 import { effCd, effSize, type Analysis } from '../../sim/photometry';
 import type { LightState, SimState } from '../../sim/types';
 import { lin } from './sceneColor';
 import { FixtureModel } from './FixtureModel';
+import { BeamGizmo } from './BeamGizmo';
 
 function useTarget(pos: [number, number, number]) {
   const obj = useMemo(() => new Object3D(), []);
@@ -26,12 +27,14 @@ function FixtureLight({
   L,
   sim,
   showHelpers,
+  showBeams,
   selected,
   onSelect,
 }: {
   L: LightState;
   sim: SimState;
   showHelpers: boolean;
+  showBeams: boolean;
   selected: boolean;
   onSelect: (id: number) => void;
 }) {
@@ -80,6 +83,16 @@ function FixtureLight({
           t={[t.x, t.y, t.z]}
           selected={selected}
           onSelect={onSelect}
+        />
+      )}
+      {/* 빔 범위 그물 (반사판은 제외) */}
+      {showBeams && L.on && kind !== 'bounce' && (
+        <BeamGizmo
+          p={[p.x, p.y, p.z]}
+          t={[t.x, t.y, t.z]}
+          angleRad={angle}
+          omni={false}
+          color={kelvinCSS(L.kelvin)}
         />
       )}
     </group>
@@ -152,12 +165,14 @@ export function Rig({
   sim,
   analysis,
   showHelpers,
+  showBeams,
   selectedLightId,
   onSelect,
 }: {
   sim: SimState;
   analysis: Analysis;
   showHelpers: boolean;
+  showBeams: boolean;
   selectedLightId: number | null;
   onSelect: (id: number) => void;
 }) {
@@ -165,7 +180,7 @@ export function Rig({
     <>
       <ambientLight intensity={analysis.bounce} />
       {sim.lights.map((L) => (
-        <FixtureLight key={L.id} L={L} sim={sim} showHelpers={showHelpers} selected={L.id === selectedLightId} onSelect={onSelect} />
+        <FixtureLight key={L.id} L={L} sim={sim} showHelpers={showHelpers} showBeams={showBeams} selected={L.id === selectedLightId} onSelect={onSelect} />
       ))}
       <WindowLights sim={sim} analysis={analysis} />
       <Sun sim={sim} analysis={analysis} />

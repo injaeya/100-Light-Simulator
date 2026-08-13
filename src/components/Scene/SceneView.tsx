@@ -50,6 +50,7 @@ export function SceneView() {
   const view = useSimulatorStore((s: Store) => s.view);
   const theme = useSimulatorStore((s) => s.theme);
   const showHelpers = useSimulatorStore((s) => s.showHelpers);
+  const showBeams = useSimulatorStore((s) => s.showBeams);
   const selectedLightId = useSimulatorStore((s) => s.selectedLightId);
   const selectLight = useSimulatorStore((s) => s.selectLight);
 
@@ -77,7 +78,7 @@ export function SceneView() {
 
       <Room sim={sim} />
       <SubjectModel sim={sim} />
-      <Rig sim={sim} analysis={analysis} showHelpers={showHelpers} selectedLightId={selectedLightId} onSelect={selectLight} />
+      <Rig sim={sim} analysis={analysis} showHelpers={showHelpers} showBeams={showBeams} selectedLightId={selectedLightId} onSelect={selectLight} />
 
       <AdaptiveDpr pixelated />
     </Canvas>

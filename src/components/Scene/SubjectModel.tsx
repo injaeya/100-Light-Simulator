@@ -66,18 +66,23 @@ export function SubjectModel({ sim }: { sim: SimState }) {
         <sphereGeometry args={[0.097, 48, 48]} />
         <meshStandardMaterial color={SKIN} roughness={0.5} />
       </mesh>
-      {/* 눈 (작은 아몬드형, 함몰) — 만화 느낌 없이 자연스럽게 */}
+      {/* 눈 (작은 아몬드 + 윗눈꺼풀로 자연스러운 눈매) */}
       {[-1, 1].map((s) => (
-        <group key={s} position={[s * 0.034, eyeH + 0.006, 0.079]}>
-          {/* 눈매(살짝 어두운 함몰) */}
-          <mesh scale={[1.35, 0.8, 0.35]}>
-            <sphereGeometry args={[0.017, 20, 16]} />
-            <meshStandardMaterial color={lin(0.5, 0.47, 0.44)} roughness={0.4} />
+        <group key={s} position={[s * 0.033, eyeH + 0.003, 0.078]}>
+          {/* 흰자 (작고 함몰) */}
+          <mesh scale={[1.3, 0.66, 0.3]}>
+            <sphereGeometry args={[0.015, 20, 16]} />
+            <meshStandardMaterial color={lin(0.42, 0.4, 0.38)} roughness={0.4} />
           </mesh>
           {/* 홍채/동공 */}
-          <mesh position={[0, 0, 0.006]}>
-            <sphereGeometry args={[0.0075, 16, 16]} />
+          <mesh position={[0, -0.001, 0.005]}>
+            <sphereGeometry args={[0.0072, 16, 16]} />
             <meshStandardMaterial color={lin(0.03, 0.022, 0.018)} roughness={0.3} />
+          </mesh>
+          {/* 윗눈꺼풀 (응시 완화) */}
+          <mesh position={[0, 0.007, 0.004]} rotation={[0.35, 0, 0]} scale={[1.45, 0.7, 0.55]}>
+            <sphereGeometry args={[0.016, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color={SKIN} roughness={0.5} />
           </mesh>
         </group>
       ))}
@@ -105,15 +110,22 @@ export function SubjectModel({ sim }: { sim: SimState }) {
           <meshStandardMaterial color={SKIN} roughness={0.55} />
         </mesh>
       ))}
-      {/* 헤어 (두상 캡 + 뒤통수) */}
-      <mesh position={[0, headY + 0.028, -0.01]} scale={[1.06, 1, 1.1]}>
-        <sphereGeometry args={[0.1, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.56]} />
+      {/* 헤어 (이마 드러나게, 두상 볼륨 + 뒤통수/구레나룻) */}
+      <mesh position={[0, headY + 0.05, -0.012]} scale={[1.08, 1.02, 1.12]}>
+        <sphereGeometry args={[0.099, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
         <meshStandardMaterial color={HAIR} roughness={0.72} />
       </mesh>
-      <mesh position={[0, headY - 0.02, -0.05]} scale={[1, 1.05, 0.7]}>
-        <sphereGeometry args={[0.1, 24, 24]} />
+      <mesh position={[0, headY - 0.015, -0.055]} scale={[1.02, 1.08, 0.72]}>
+        <sphereGeometry args={[0.099, 24, 24]} />
         <meshStandardMaterial color={HAIR} roughness={0.74} />
       </mesh>
+      {/* 구레나룻 */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[s * 0.086, eyeH + 0.02, -0.02]} scale={[0.4, 1, 0.7]}>
+          <sphereGeometry args={[0.03, 12, 12]} />
+          <meshStandardMaterial color={HAIR} roughness={0.75} />
+        </mesh>
+      ))}
 
       {/* ===== 목 ===== */}
       <mesh position={[0, neckY, 0.005]} castShadow>
@@ -122,6 +134,13 @@ export function SubjectModel({ sim }: { sim: SimState }) {
       </mesh>
 
       {/* ===== 몸통 ===== */}
+      {/* 승모근(목→어깨 경사) */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[s * 0.07, shoulderY + 0.05, -0.005]} rotation={[0, 0, s * 0.6]} scale={[1, 0.55, 0.75]} castShadow>
+          <sphereGeometry args={[0.09, 16, 16]} />
+          <meshStandardMaterial color={CLOTH} roughness={0.82} />
+        </mesh>
+      ))}
       {/* 어깨 */}
       <mesh position={[0, shoulderY, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <capsuleGeometry args={[0.095, sx * 2 - 0.06, 6, 20]} />

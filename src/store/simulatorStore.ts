@@ -63,6 +63,8 @@ interface UIState {
   selectedLightId: number | null;
   selectedWinId: number | null;
   showHelpers: boolean;
+  /** 빔 범위(와이어프레임 콘) 표시 */
+  showBeams: boolean;
   spaceKey: string;
   lightingKey: string;
   theme: Theme;
@@ -91,6 +93,7 @@ interface Actions {
 
   setView: (v: ViewMode) => void;
   toggleHelpers: () => void;
+  toggleBeams: () => void;
   toggleTheme: () => void;
 }
 
@@ -116,6 +119,7 @@ export const useSimulatorStore = create<Store>((set) => ({
   selectedLightId: null,
   selectedWinId: null,
   showHelpers: true,
+  showBeams: true,
   spaceKey: 'studio',
   lightingKey: 'interview',
   theme: initTheme(),
@@ -249,6 +253,7 @@ export const useSimulatorStore = create<Store>((set) => ({
 
   setView: (v) => set({ view: v }),
   toggleHelpers: () => set((s) => ({ showHelpers: !s.showHelpers })),
+  toggleBeams: () => set((s) => ({ showBeams: !s.showBeams })),
   toggleTheme: () =>
     set((s) => {
       const theme: Theme = s.theme === 'dark' ? 'light' : 'dark';
