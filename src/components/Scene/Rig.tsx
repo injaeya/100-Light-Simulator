@@ -85,8 +85,8 @@ function FixtureLight({
           onSelect={onSelect}
         />
       )}
-      {/* 빔 범위 그물 (반사판은 제외) */}
-      {showBeams && L.on && kind !== 'bounce' && (
+      {/* 빔 범위 그물 — 선택된 조명만 (반사판 제외) */}
+      {showBeams && selected && L.on && kind !== 'bounce' && (
         <BeamGizmo
           p={[p.x, p.y, p.z]}
           t={[t.x, t.y, t.z]}

@@ -39,9 +39,10 @@ export function PresetPanel() {
         </label>
         <label className="toggle-row">
           <input type="checkbox" checked={showBeams} onChange={toggleBeams} />
-          <span>빔 범위 (그물)</span>
+          <span>빔 범위 그물 (선택 조명)</span>
         </label>
       </Field>
+      <p className="hint">조명을 선택하면 그 조명의 빔 범위가 그물로 표시됩니다.</p>
       <p className="hint">공간(방·창·자연광)과 조명(기재 배치)은 독립 적용됩니다.</p>
     </Panel>
   );
