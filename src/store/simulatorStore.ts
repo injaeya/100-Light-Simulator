@@ -1,175 +1,242 @@
 /**
- * simulatorStore.ts — 시뮬레이터 전역 상태 (zustand)
+ * simulatorStore.ts — LIGHTPLAN 상태 스토어 (zustand)
+ * 공간(방·환경·창)과 조명(기재 배치)을 독립 적용한다.
  */
 import { create } from 'zustand';
-import type { Sensor } from '../lib/optics';
-import {
-  FIXTURE_PRESETS,
-  SENSOR_PRESETS,
-  type FixtureType,
-  type SpaceId,
-} from '../data/presets';
+import type {
+  CamState,
+  EnvState,
+  ExpoState,
+  LightState,
+  RoomState,
+  SimState,
+  SubjState,
+  WinState,
+} from '../sim/types';
+import { LIGHTING_PRESETS, SPACE_PRESETS } from '../sim/presets';
+import { fitExposure } from '../sim/photometry';
+import { FIXTURES } from '../sim/fixtures';
+import { modsFor } from '../sim/modifiers';
 
-export type Vec3 = [number, number, number];
+export type ViewMode = 'cam' | 'free';
 
-/** 조명 인스턴스 */
-export interface Light {
-  id: string;
-  name: string;
-  type: FixtureType;
-  position: Vec3;
-  /** 조준 대상 좌표 (피사체 방향) */
-  target: Vec3;
-  /** 광속 (루멘, lm) — 실제 광량 단위 */
-  lumens: number;
-  /** 색온도 (K) */
-  kelvin: number;
-  /** 확산각 (도) */
-  coneAngle: number;
-  enabled: boolean;
+let uid = 1;
+const nextId = () => uid++;
+
+function withIds<T extends { id?: number }>(specs: Omit<T, 'id'>[]): T[] {
+  return specs.map((sp) => ({ ...sp, id: nextId() }) as T);
 }
 
-/** 카메라 설정 */
-export interface CameraSettings {
-  sensorId: string;
-  sensor: Sensor;
-  focalLength: number;
-  aperture: number;
-  shutter: number;
-  iso: number;
-  /** 피사체까지 거리 (m) */
-  subjectDistance: number;
-}
-
-interface SimulatorState {
-  space: SpaceId;
-  camera: CameraSettings;
-  lights: Light[];
-  selectedLightId: string | null;
-  /** 노출/뷰 옵션 */
-  showHelpers: boolean;
-  exposureCompensation: number;
-  /** 포스트프로세싱(실사 효과) 마스터 토글 */
-  postFx: boolean;
-  /** 피사계 심도(보케) 토글 */
-  depthOfField: boolean;
-
-  /* actions */
-  setSpace: (space: SpaceId) => void;
-  updateCamera: (patch: Partial<CameraSettings>) => void;
-  setSensor: (sensorId: string) => void;
-  addLight: (type: FixtureType) => void;
-  removeLight: (id: string) => void;
-  updateLight: (id: string, patch: Partial<Light>) => void;
-  selectLight: (id: string | null) => void;
-  toggleHelpers: () => void;
-  setExposureCompensation: (v: number) => void;
-  togglePostFx: () => void;
-  toggleDepthOfField: () => void;
-  resetLights: () => void;
-}
-
-let lightCounter = 0;
-function nextLightId(): string {
-  lightCounter += 1;
-  return `light-${lightCounter}`;
-}
-
-function createLight(type: FixtureType, position: Vec3): Light {
-  const preset = FIXTURE_PRESETS[type];
-  return {
-    id: nextLightId(),
-    name: preset.label,
-    type,
-    position,
-    target: [0, 1.2, 0],
-    lumens: preset.defaultLumens,
-    kelvin: preset.defaultKelvin,
-    coneAngle: preset.defaultConeAngle,
-    enabled: true,
+/** 기본 상태 = 스튜디오 공간 + 인터뷰 조명 */
+function makeInitialState(): SimState {
+  const space = SPACE_PRESETS.studio;
+  const lp = LIGHTING_PRESETS.interview.make();
+  const base: SimState = {
+    cam: { az: 0, dist: lp.cam.dist, h: lp.cam.h, focal: lp.cam.focal },
+    expo: { iso: 800, shutter: 1 / 50, f: 2.8, nd: 2, wb: 5600 },
+    subj: { ...space.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
+    room: { ...space.room },
+    env: { ...space.env },
+    wins: withIds<WinState>(space.wins()),
+    lights: withIds<LightState>(lp.lights),
   };
+  const fit = fitExposure(base);
+  base.expo.nd = fit.nd;
+  base.expo.f = fit.f;
+  return base;
 }
 
-/** 기본 3점 조명 세팅 */
-function defaultThreePointLights(): Light[] {
-  const key = createLight('softbox', [2.6, 2.4, 2.6]);
-  key.name = '키 라이트';
-  key.lumens = 12000;
-
-  const fill = createLight('panel', [-2.6, 1.9, 2.2]);
-  fill.name = '필 라이트';
-  fill.lumens = 6000;
-
-  const back = createLight('fresnel', [-1.5, 3.2, -3]);
-  back.name = '백 라이트';
-  back.kelvin = 6500;
-  back.lumens = 12000;
-
-  return [key, fill, back];
+interface UIState {
+  view: ViewMode;
+  selectedLightId: number | null;
+  selectedWinId: number | null;
+  showHelpers: boolean;
+  spaceKey: string;
+  lightingKey: string;
 }
 
-const defaultSensorPreset = SENSOR_PRESETS.find((s) => s.id === 'full-frame')!;
+interface Actions {
+  setCam: (patch: Partial<CamState>) => void;
+  setExpo: (patch: Partial<ExpoState>) => void;
+  setSubj: (patch: Partial<SubjState>) => void;
+  setRoom: (patch: Partial<RoomState>) => void;
+  setEnv: (patch: Partial<EnvState>) => void;
 
-export const useSimulatorStore = create<SimulatorState>((set) => ({
-  space: 'interview',
-  camera: {
-    sensorId: defaultSensorPreset.id,
-    sensor: defaultSensorPreset.sensor,
-    focalLength: 50,
-    aperture: 2.8,
-    shutter: 1 / 50,
-    iso: 400,
-    subjectDistance: 2.5,
-  },
-  lights: defaultThreePointLights(),
+  addLight: (fix?: string) => void;
+  removeLight: (id: number) => void;
+  updateLight: (id: number, patch: Partial<LightState>) => void;
+  selectLight: (id: number | null) => void;
+
+  addWin: () => void;
+  removeWin: (id: number) => void;
+  updateWin: (id: number, patch: Partial<WinState>) => void;
+  selectWin: (id: number | null) => void;
+
+  applyLighting: (key: string) => void;
+  applySpace: (key: string) => void;
+  fitExposureNow: () => void;
+
+  setView: (v: ViewMode) => void;
+  toggleHelpers: () => void;
+}
+
+export type Store = SimState & UIState & Actions;
+
+/** 방 경계 안으로 피사체·창 클램프 */
+function clampPlacement(s: SimState) {
+  const R = s.room, m = 0.25;
+  s.subj.x = Math.min(R.w / 2 - m, Math.max(-R.w / 2 + m, s.subj.x));
+  s.subj.z = Math.min(R.d / 2 - m, Math.max(-R.d / 2 + m, s.subj.z));
+  for (const W of s.wins) {
+    const half = W.wall === 'left' || W.wall === 'right' ? R.d / 2 : R.w / 2;
+    W.w = Math.min(W.w, half * 2 - 0.2);
+    W.u = Math.min(half - W.w / 2, Math.max(-half + W.w / 2, W.u));
+    W.h = Math.min(W.h, R.h - 0.15);
+    W.sill = Math.min(R.h - W.h - 0.05, Math.max(0, W.sill));
+  }
+}
+
+export const useSimulatorStore = create<Store>((set) => ({
+  ...makeInitialState(),
+  view: 'cam',
   selectedLightId: null,
+  selectedWinId: null,
   showHelpers: true,
-  exposureCompensation: 0,
-  postFx: true,
-  depthOfField: false,
+  spaceKey: 'studio',
+  lightingKey: 'interview',
 
-  setSpace: (space) => set({ space }),
+  setCam: (patch) => set((s) => ({ cam: { ...s.cam, ...patch } })),
+  setExpo: (patch) => set((s) => ({ expo: { ...s.expo, ...patch } })),
+  setSubj: (patch) =>
+    set((s) => {
+      const next = { ...s, subj: { ...s.subj, ...patch } };
+      clampPlacement(next);
+      return { subj: next.subj, wins: next.wins };
+    }),
+  setRoom: (patch) =>
+    set((s) => {
+      const next: SimState = { ...s, room: { ...s.room, ...patch }, wins: s.wins.map((w) => ({ ...w })), subj: { ...s.subj } };
+      clampPlacement(next);
+      return { room: next.room, subj: next.subj, wins: next.wins };
+    }),
+  setEnv: (patch) => set((s) => ({ env: { ...s.env, ...patch } })),
 
-  updateCamera: (patch) =>
-    set((state) => ({ camera: { ...state.camera, ...patch } })),
+  addLight: (fix = 'am200x') =>
+    set((s) => {
+      const mods = modsFor(fix);
+      const cct = FIXTURES[fix].cct;
+      const light: LightState = {
+        id: nextId(),
+        on: true,
+        name: FIXTURES[fix].label.split(' ')[0],
+        fix,
+        mod: mods.includes('sb60') ? 'sb60' : mods[0],
+        dim: 100,
+        kelvin: Math.round((cct[0] + cct[1]) / 2),
+        az: 40,
+        dist: 1.8,
+        h: 1.9,
+        shadow: true,
+        aim: 'subj',
+      };
+      return { lights: [...s.lights, light], selectedLightId: light.id };
+    }),
+  removeLight: (id) =>
+    set((s) => ({
+      lights: s.lights.filter((l) => l.id !== id),
+      selectedLightId: s.selectedLightId === id ? null : s.selectedLightId,
+    })),
+  updateLight: (id, patch) =>
+    set((s) => ({
+      lights: s.lights.map((l) => {
+        if (l.id !== id) return l;
+        const next = { ...l, ...patch };
+        // 기재를 바꾸면 모디파이어 호환성 보정
+        if (patch.fix && !modsFor(patch.fix).includes(next.mod)) {
+          next.mod = modsFor(patch.fix)[0];
+        }
+        return next;
+      }),
+    })),
+  selectLight: (id) => set({ selectedLightId: id, selectedWinId: null }),
 
-  setSensor: (sensorId) =>
-    set((state) => {
-      const preset = SENSOR_PRESETS.find((s) => s.id === sensorId);
-      if (!preset) return state;
+  addWin: () =>
+    set((s) => {
+      const win: WinState = { id: nextId(), on: true, wall: 'left', u: 0, w: 1.6, h: 1.5, sill: 0.9, curtain: 100 };
+      const next: SimState = { ...s, wins: [...s.wins, win] };
+      clampPlacement(next);
+      return { wins: next.wins, selectedWinId: win.id };
+    }),
+  removeWin: (id) =>
+    set((s) => ({
+      wins: s.wins.filter((w) => w.id !== id),
+      selectedWinId: s.selectedWinId === id ? null : s.selectedWinId,
+    })),
+  updateWin: (id, patch) =>
+    set((s) => {
+      const next: SimState = { ...s, wins: s.wins.map((w) => (w.id === id ? { ...w, ...patch } : w)) };
+      clampPlacement(next);
+      return { wins: next.wins };
+    }),
+  selectWin: (id) => set({ selectedWinId: id, selectedLightId: null }),
+
+  applyLighting: (key) =>
+    set((s) => {
+      const P = LIGHTING_PRESETS[key];
+      if (!P) return s;
+      const lp = P.make();
+      const base: SimState = {
+        ...s,
+        cam: { ...s.cam, dist: lp.cam.dist, h: lp.cam.h, focal: lp.cam.focal },
+        subj: { ...s.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
+        lights: withIds<LightState>(lp.lights),
+      };
+      const fit = fitExposure(base);
       return {
-        camera: { ...state.camera, sensorId, sensor: preset.sensor },
+        cam: base.cam,
+        subj: base.subj,
+        lights: base.lights,
+        expo: { ...s.expo, nd: fit.nd, f: fit.f },
+        lightingKey: key,
+        selectedLightId: null,
       };
     }),
 
-  addLight: (type) =>
-    set((state) => {
-      const angle = (state.lights.length * Math.PI) / 4;
-      const pos: Vec3 = [Math.cos(angle) * 3.5, 2.4, Math.sin(angle) * 3.5];
-      const light = createLight(type, pos);
-      return { lights: [...state.lights, light], selectedLightId: light.id };
+  applySpace: (key) =>
+    set((s) => {
+      const P = SPACE_PRESETS[key];
+      if (!P) return s;
+      const base: SimState = {
+        ...s,
+        room: { ...P.room },
+        env: { ...P.env },
+        subj: { ...P.subj },
+        wins: withIds<WinState>(P.wins()),
+      };
+      clampPlacement(base);
+      const fit = fitExposure(base);
+      return {
+        room: base.room,
+        env: base.env,
+        subj: base.subj,
+        wins: base.wins,
+        expo: { ...s.expo, nd: fit.nd, f: fit.f },
+        spaceKey: key,
+        selectedWinId: null,
+      };
     }),
 
-  removeLight: (id) =>
-    set((state) => ({
-      lights: state.lights.filter((l) => l.id !== id),
-      selectedLightId: state.selectedLightId === id ? null : state.selectedLightId,
-    })),
+  fitExposureNow: () =>
+    set((s) => {
+      const fit = fitExposure(s);
+      return { expo: { ...s.expo, nd: fit.nd, f: fit.f } };
+    }),
 
-  updateLight: (id, patch) =>
-    set((state) => ({
-      lights: state.lights.map((l) => (l.id === id ? { ...l, ...patch } : l)),
-    })),
-
-  selectLight: (id) => set({ selectedLightId: id }),
-
-  toggleHelpers: () => set((state) => ({ showHelpers: !state.showHelpers })),
-
-  setExposureCompensation: (v) => set({ exposureCompensation: v }),
-
-  togglePostFx: () => set((state) => ({ postFx: !state.postFx })),
-
-  toggleDepthOfField: () => set((state) => ({ depthOfField: !state.depthOfField })),
-
-  resetLights: () => set({ lights: defaultThreePointLights(), selectedLightId: null }),
+  setView: (v) => set({ view: v }),
+  toggleHelpers: () => set((s) => ({ showHelpers: !s.showHelpers })),
 }));
+
+/** 셀렉터 헬퍼: 현재 SimState만 추출 */
+export function pickSimState(s: Store): SimState {
+  return { cam: s.cam, expo: s.expo, subj: s.subj, room: s.room, env: s.env, wins: s.wins, lights: s.lights };
+}

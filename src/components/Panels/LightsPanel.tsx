@@ -1,216 +1,172 @@
 /**
- * LightsPanel.tsx — 조명 목록 + 추가 + 선택 조명 편집
+ * LightsPanel.tsx — 조명 목록 · 추가 · 편집
  */
-import { FIXTURE_PRESETS, FIXTURE_TYPES, KELVIN_PRESETS } from '../../data/presets';
-import {
-  formatLux,
-  illuminance,
-  kelvinToRGB,
-  luminousIntensity,
-  rgbToHex,
-} from '../../lib/optics';
+import { useState } from 'react';
 import { useSimulatorStore } from '../../store/simulatorStore';
-import { Field, Panel, Slider } from './controls';
-
-/** 광원에서 피사체까지 직선거리 (m) */
-function distanceToSubject(position: [number, number, number], target: [number, number, number]): number {
-  return Math.hypot(
-    position[0] - target[0],
-    position[1] - target[1],
-    position[2] - target[2],
-  );
-}
-
-function LightEditor({ id }: { id: string }) {
-  const light = useSimulatorStore((s) => s.lights.find((l) => l.id === id));
-  const updateLight = useSimulatorStore((s) => s.updateLight);
-  if (!light) return null;
-
-  const swatch = rgbToHex(kelvinToRGB(light.kelvin));
-  const isSpot = light.type !== 'point';
-
-  // 측광: 광속 → 광도(cd) → 피사체 조도(lux)
-  const candela = luminousIntensity(light.lumens, isSpot ? light.coneAngle : 360);
-  const dist = distanceToSubject(light.position, light.target);
-  const lux = illuminance(candela, dist);
-
-  return (
-    <div className="light-editor">
-      <Field label="이름">
-        <input
-          className="text-input"
-          value={light.name}
-          onChange={(e) => updateLight(id, { name: e.target.value })}
-        />
-      </Field>
-
-      <Field label="광속" value={`${light.lumens.toLocaleString()} lm`}>
-        <Slider
-          min={0}
-          max={30000}
-          step={100}
-          value={light.lumens}
-          onChange={(v) => updateLight(id, { lumens: v })}
-        />
-      </Field>
-
-      {/* 측광 리드아웃 */}
-      <div className="readout">
-        <div className="readout-row">
-          <span>광도</span>
-          <strong>{Math.round(candela).toLocaleString()} cd</strong>
-        </div>
-        <div className="readout-row">
-          <span>피사체 조도 ({dist.toFixed(1)}m)</span>
-          <strong>{formatLux(lux)}</strong>
-        </div>
-      </div>
-
-      <Field
-        label="색온도"
-        value={
-          <span className="kelvin-value">
-            <span className="kelvin-swatch" style={{ background: swatch }} />
-            {light.kelvin}K
-          </span>
-        }
-      >
-        <Slider
-          min={2000}
-          max={10000}
-          step={100}
-          value={light.kelvin}
-          onChange={(v) => updateLight(id, { kelvin: v })}
-        />
-        <div className="kelvin-presets">
-          {KELVIN_PRESETS.map((p) => (
-            <button
-              key={p.k}
-              type="button"
-              className="chip"
-              onClick={() => updateLight(id, { kelvin: p.k })}
-              title={p.label}
-            >
-              {p.k}K
-            </button>
-          ))}
-        </div>
-      </Field>
-
-      {isSpot && (
-        <Field label="확산각" value={`${Math.round(light.coneAngle)}°`}>
-          <Slider
-            min={5}
-            max={140}
-            step={1}
-            value={light.coneAngle}
-            onChange={(v) => updateLight(id, { coneAngle: v })}
-          />
-        </Field>
-      )}
-
-      <div className="xyz-group">
-        {(['x', 'y', 'z'] as const).map((axis, i) => (
-          <Field key={axis} label={`위치 ${axis.toUpperCase()}`} value={light.position[i].toFixed(1)}>
-            <Slider
-              min={-8}
-              max={8}
-              step={0.1}
-              value={light.position[i]}
-              onChange={(v) => {
-                const pos = [...light.position] as typeof light.position;
-                pos[i] = v;
-                updateLight(id, { position: pos });
-              }}
-            />
-          </Field>
-        ))}
-      </div>
-
-      <label className="toggle-row">
-        <input
-          type="checkbox"
-          checked={light.enabled}
-          onChange={(e) => updateLight(id, { enabled: e.target.checked })}
-        />
-        <span>{light.enabled ? '켜짐' : '꺼짐'}</span>
-      </label>
-    </div>
-  );
-}
+import { FIXTURES, FIXTURE_KEYS } from '../../sim/fixtures';
+import { MODIFIERS, modsFor } from '../../sim/modifiers';
+import { kelvinCSS } from '../../sim/kelvin';
+import type { Aim } from '../../sim/types';
+import { Panel, Field, Slider, Segmented, Select } from './controls';
 
 export function LightsPanel() {
   const lights = useSimulatorStore((s) => s.lights);
   const selectedLightId = useSimulatorStore((s) => s.selectedLightId);
-  const selectLight = useSimulatorStore((s) => s.selectLight);
   const addLight = useSimulatorStore((s) => s.addLight);
   const removeLight = useSimulatorStore((s) => s.removeLight);
-  const resetLights = useSimulatorStore((s) => s.resetLights);
+  const updateLight = useSimulatorStore((s) => s.updateLight);
+  const selectLight = useSimulatorStore((s) => s.selectLight);
+
+  const [addFix, setAddFix] = useState<string>(FIXTURE_KEYS[0]);
+
+  const selected = lights.find((l) => l.id === selectedLightId) ?? null;
+
+  const fixtureOptions = FIXTURE_KEYS.map((k) => ({ value: k, label: FIXTURES[k].label }));
 
   return (
-    <Panel
-      title="조명"
-      subtitle={`${lights.length}개 설치됨`}
-      actions={
-        <button type="button" className="ghost-btn" onClick={resetLights}>
-          3점 조명 초기화
-        </button>
-      }
-    >
-      {/* 조명 목록 */}
+    <Panel title="조명" subtitle={`${lights.length}개`}>
       <div className="light-list">
-        {lights.map((l) => {
-          const swatch = rgbToHex(kelvinToRGB(l.kelvin));
-          return (
-            <div
-              key={l.id}
-              className={`light-row ${l.id === selectedLightId ? 'selected' : ''} ${
-                l.enabled ? '' : 'disabled'
-              }`}
-              onClick={() => selectLight(l.id)}
+        {lights.map((l) => (
+          <div
+            key={l.id}
+            className={`light-row ${l.id === selectedLightId ? 'selected' : ''} ${l.on ? '' : 'disabled'}`}
+            onClick={() => selectLight(l.id)}
+          >
+            <span className="light-dot" style={{ background: kelvinCSS(l.kelvin) }} />
+            <span className="light-name">{l.name}</span>
+            <span className="light-type">{FIXTURES[l.fix].label}</span>
+            <button
+              className="icon-btn"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeLight(l.id);
+              }}
             >
-              <span className="light-dot" style={{ background: swatch }} />
-              <span className="light-name">{l.name}</span>
-              <span className="light-type">{FIXTURE_PRESETS[l.type].label}</span>
-              <button
-                type="button"
-                className="icon-btn"
-                title="삭제"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeLight(l.id);
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          );
-        })}
+              ✕
+            </button>
+          </div>
+        ))}
       </div>
 
-      {/* 조명 추가 */}
       <div className="add-fixtures">
         <span className="add-label">조명 추가</span>
-        <div className="fixture-grid">
-          {FIXTURE_TYPES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              className="fixture-btn"
-              title={FIXTURE_PRESETS[t].description}
-              onClick={() => addLight(t)}
-            >
-              {FIXTURE_PRESETS[t].label}
-            </button>
-          ))}
-        </div>
+        <Select options={fixtureOptions} value={addFix} onChange={setAddFix} />
+        <button className="ghost-btn" type="button" onClick={() => addLight(addFix)}>
+          추가
+        </button>
       </div>
 
-      {/* 선택 조명 편집 */}
-      {selectedLightId ? (
-        <LightEditor id={selectedLightId} />
+      {selected ? (
+        <div className="light-editor">
+          <Field label="이름">
+            <input
+              className="text-input"
+              type="text"
+              value={selected.name}
+              onChange={(e) => updateLight(selected.id, { name: e.target.value })}
+            />
+          </Field>
+          <Field label="전원">
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={selected.on}
+                onChange={(e) => updateLight(selected.id, { on: e.target.checked })}
+              />
+              <span>{selected.on ? '켜짐' : '꺼짐'}</span>
+            </label>
+          </Field>
+          <Field label="기재">
+            <Select
+              options={fixtureOptions}
+              value={selected.fix}
+              onChange={(v) => updateLight(selected.id, { fix: v })}
+            />
+          </Field>
+          <Field label="모디파이어">
+            <Select
+              options={modsFor(selected.fix).map((k) => ({ value: k, label: MODIFIERS[k].label }))}
+              value={selected.mod}
+              onChange={(v) => updateLight(selected.id, { mod: v })}
+            />
+          </Field>
+          <Field label="디머" value={`${selected.dim}%`}>
+            <Slider
+              min={0}
+              max={100}
+              step={1}
+              value={selected.dim}
+              onChange={(v) => updateLight(selected.id, { dim: v })}
+            />
+          </Field>
+          <Field
+            label="색온도"
+            value={
+              <span className="kelvin-value">
+                <span className="kelvin-swatch" style={{ background: kelvinCSS(selected.kelvin) }} />
+                {`${selected.kelvin}K`}
+              </span>
+            }
+          >
+            <Slider
+              min={2000}
+              max={10000}
+              step={100}
+              value={selected.kelvin}
+              onChange={(v) => updateLight(selected.id, { kelvin: v })}
+            />
+          </Field>
+          <Field label="방위 az" value={`${selected.az}°`}>
+            <Slider
+              min={-180}
+              max={180}
+              step={1}
+              value={selected.az}
+              onChange={(v) => updateLight(selected.id, { az: v })}
+            />
+          </Field>
+          <Field label="거리 dist" value={`${selected.dist.toFixed(2)}m`}>
+            <Slider
+              min={0.3}
+              max={6}
+              step={0.05}
+              value={selected.dist}
+              onChange={(v) => updateLight(selected.id, { dist: v })}
+            />
+          </Field>
+          <Field label="높이 h" value={`${selected.h.toFixed(2)}m`}>
+            <Slider
+              min={0.3}
+              max={4}
+              step={0.02}
+              value={selected.h}
+              onChange={(v) => updateLight(selected.id, { h: v })}
+            />
+          </Field>
+          <Field label="지향">
+            <Segmented<Aim>
+              options={[
+                { value: 'subj', label: '인물' },
+                { value: 'bg', label: '배경' },
+              ]}
+              value={selected.aim}
+              onChange={(v) => updateLight(selected.id, { aim: v })}
+            />
+          </Field>
+          <Field label="그림자">
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={selected.shadow}
+                onChange={(e) => updateLight(selected.id, { shadow: e.target.checked })}
+              />
+              <span>그림자</span>
+            </label>
+          </Field>
+        </div>
       ) : (
-        <p className="hint">목록 또는 3D 뷰에서 조명을 선택하면 세부 조정이 가능합니다.</p>
+        <p className="hint">목록에서 조명을 선택하세요.</p>
       )}
     </Panel>
   );

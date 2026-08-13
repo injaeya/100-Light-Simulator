@@ -2,6 +2,8 @@ import { chromium } from 'playwright';
 
 const url = process.argv[2] || 'http://localhost:4173/';
 const out = process.argv[3] || 'shot.png';
+const vw = parseInt(process.argv[4] || '1440', 10);
+const vh = parseInt(process.argv[5] || '900', 10);
 
 const browser = await chromium.launch({
   args: [
@@ -12,7 +14,7 @@ const browser = await chromium.launch({
     '--enable-webgl',
   ],
 });
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const page = await browser.newPage({ viewport: { width: vw, height: vh } });
 
 const errors = [];
 page.on('console', (m) => {
