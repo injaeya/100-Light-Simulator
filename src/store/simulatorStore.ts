@@ -20,8 +20,8 @@ export interface Light {
   position: Vec3;
   /** 조준 대상 좌표 (피사체 방향) */
   target: Vec3;
-  /** 출력 (와트 상당) */
-  intensity: number;
+  /** 광속 (루멘, lm) — 실제 광량 단위 */
+  lumens: number;
   /** 색온도 (K) */
   kelvin: number;
   /** 확산각 (도) */
@@ -77,7 +77,7 @@ function createLight(type: FixtureType, position: Vec3): Light {
     type,
     position,
     target: [0, 1.2, 0],
-    intensity: preset.defaultIntensity,
+    lumens: preset.defaultLumens,
     kelvin: preset.defaultKelvin,
     coneAngle: preset.defaultConeAngle,
     enabled: true,
@@ -88,16 +88,16 @@ function createLight(type: FixtureType, position: Vec3): Light {
 function defaultThreePointLights(): Light[] {
   const key = createLight('softbox', [3, 2.6, 3]);
   key.name = '키 라이트';
-  key.intensity = 900;
+  key.lumens = 9000;
 
   const fill = createLight('panel', [-3, 2, 2.5]);
   fill.name = '필 라이트';
-  fill.intensity = 350;
+  fill.lumens = 4000;
 
   const back = createLight('fresnel', [-1.5, 3.2, -3]);
   back.name = '백 라이트';
   back.kelvin = 6500;
-  back.intensity = 700;
+  back.lumens = 12000;
 
   return [key, fill, back];
 }

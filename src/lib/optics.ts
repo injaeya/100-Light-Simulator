@@ -181,6 +181,77 @@ export function inverseSquareFalloff(intensity: number, distance: number): numbe
   return intensity / (d * d);
 }
 
+/* ------------------------------------------------------------------ */
+/* 측광(Photometry) — 광속(lm) → 광도(cd) → 조도(lux)                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 원뿔 빔의 입체각 (steradian)
+ * Ω = 2π (1 − cos(θ)),  θ = 반각(half-angle)
+ * @param halfAngleDeg 빔 반각 (도)
+ */
+export function coneSolidAngle(halfAngleDeg: number): number {
+  const half = (Math.min(90, Math.max(0, halfAngleDeg)) * Math.PI) / 180;
+  return 2 * Math.PI * (1 - Math.cos(half));
+}
+
+/**
+ * 광속(루멘) → 광도(칸델라)
+ * 지향성 광원: I = Φ / Ω  (Ω = 빔 입체각)
+ * 전방향 광원: I = Φ / 4π
+ *
+ * @param lumens 광속 Φ (lm)
+ * @param coneAngleDeg 전각(full cone angle, 도). 전방향(point)은 360 전달
+ */
+export function luminousIntensity(lumens: number, coneAngleDeg: number): number {
+  // 전방향(구형 분포)
+  if (coneAngleDeg >= 360) {
+    return lumens / (4 * Math.PI);
+  }
+  const omega = coneSolidAngle(coneAngleDeg / 2);
+  // 아주 좁은 빔에서 0 분모 방지
+  return lumens / Math.max(1e-4, omega);
+}
+
+/**
+ * 조도(lux) — 역제곱 법칙
+ * E = I / d²
+ * @param candela 광도 (cd)
+ * @param distance 거리 (m)
+ */
+export function illuminance(candela: number, distance: number): number {
+  const d = Math.max(0.01, distance);
+  return candela / (d * d);
+}
+
+/**
+ * 카메라 노출 배율 (톤매핑 노출로 사용)
+ *
+ * 노출 방정식에서 센서 도달 광량 H ∝ (t · S) / N² 이므로,
+ * 동일 장면 휘도에 대해 이 값이 클수록 화면이 밝아진다.
+ * (조리개를 조이면 N↑ → 어두워지고, 셔터/ISO↑ → 밝아진다)
+ *
+ * @param aperture 조리개 N (f-number)
+ * @param shutter 셔터 t (초)
+ * @param iso ISO 감도 S
+ * @param k 보정 상수 (씬 휘도 스케일에 맞춘 캘리브레이션)
+ */
+export function exposureMultiplier(
+  aperture: number,
+  shutter: number,
+  iso: number,
+  k: number,
+): number {
+  return (k * (shutter * (iso / 100))) / (aperture * aperture);
+}
+
+/** 조도(lux)를 사람이 읽기 좋은 문자열로 */
+export function formatLux(lux: number): string {
+  if (!isFinite(lux)) return '∞';
+  if (lux >= 1000) return `${(lux / 1000).toFixed(1)}k lx`;
+  return `${Math.round(lux)} lx`;
+}
+
 /** 셔터 속도(초)를 "1/x" 표기로 포맷 */
 export function formatShutter(shutter: number): string {
   if (shutter >= 1) return `${shutter}"`;

@@ -1,16 +1,18 @@
 /**
- * Lights.tsx — 스토어의 조명들을 Three.js 광원 + 시각 헬퍼로 렌더링
+ * Lights.tsx — 스토어의 조명들을 물리 기반 Three.js 광원으로 렌더링
+ *
+ * three r155+ 는 물리 광원 단위를 사용한다:
+ *   - SpotLight / PointLight 의 intensity 는 광도(칸델라, cd)
+ *   - decay = 2 → 역제곱 법칙(E = I / d²) 적용
+ * 따라서 광속(lm)을 빔 입체각으로 나눠 광도(cd)로 환산해 넣으면
+ * 실제 조명의 밝기·거리 감쇠·빔 확산이 물리적으로 재현된다.
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { DoubleSide, Object3D, type SpotLight as ThreeSpotLight } from 'three';
-import { kelvinToRGB, rgbToHex } from '../../lib/optics';
+import { FIXTURE_PRESETS } from '../../data/presets';
+import { kelvinToRGB, luminousIntensity, rgbToHex } from '../../lib/optics';
 import type { Light } from '../../store/simulatorStore';
 import { useSimulatorStore } from '../../store/simulatorStore';
-
-/** 출력(와트 상당) → three.js intensity 로 대략 매핑 */
-function toThreeIntensity(intensity: number): number {
-  return (intensity / 1000) * 3;
-}
 
 interface LightItemProps {
   light: Light;
@@ -23,6 +25,7 @@ function LightItem({ light, showHelpers, selected, onSelect }: LightItemProps) {
   const spotRef = useRef<ThreeSpotLight>(null);
   const targetObj = useMemo(() => new Object3D(), []);
   const color = rgbToHex(kelvinToRGB(light.kelvin));
+  const preset = FIXTURE_PRESETS[light.type];
 
   // 스포트라이트 타겟 좌표 갱신 + 연결
   useEffect(() => {
@@ -48,9 +51,13 @@ function LightItem({ light, showHelpers, selected, onSelect }: LightItemProps) {
     ) : null;
   }
 
-  const threeIntensity = toThreeIntensity(light.intensity);
   const isOmni = light.type === 'point';
-  const penumbra = light.type === 'softbox' || light.type === 'panel' ? 0.9 : 0.4;
+
+  // 광속(lm) → 광도(cd). 물리 광원 intensity 로 그대로 사용.
+  const candela = luminousIntensity(light.lumens, isOmni ? 360 : light.coneAngle);
+
+  // 기구 부드러움 → 페넘브라(빔 가장자리 감쇠). 소프트박스=1에 가깝게.
+  const penumbra = Math.min(1, 0.15 + preset.softness * 0.85);
 
   return (
     <group>
@@ -58,10 +65,12 @@ function LightItem({ light, showHelpers, selected, onSelect }: LightItemProps) {
         <pointLight
           position={light.position}
           color={color}
-          intensity={threeIntensity}
-          distance={20}
+          intensity={candela}
           decay={2}
           castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+          shadow-bias={-0.0005}
         />
       ) : (
         <>
@@ -70,19 +79,20 @@ function LightItem({ light, showHelpers, selected, onSelect }: LightItemProps) {
             ref={spotRef}
             position={light.position}
             color={color}
-            intensity={threeIntensity}
+            intensity={candela}
             angle={(light.coneAngle * Math.PI) / 180 / 2}
             penumbra={penumbra}
-            distance={30}
             decay={2}
             castShadow
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-bias={-0.0004}
+            shadow-normalBias={0.02}
           />
         </>
       )}
 
-      {/* 조명 기구 시각 표현 */}
+      {/* 조명 기구 시각 표현 (헬퍼) */}
       {showHelpers && (
         <mesh
           position={light.position}
@@ -98,12 +108,8 @@ function LightItem({ light, showHelpers, selected, onSelect }: LightItemProps) {
           ) : (
             <coneGeometry args={[0.18, 0.32, 16]} />
           )}
-          <meshStandardMaterial
-            color={color}
-            emissive={color}
-            emissiveIntensity={selected ? 1.6 : 0.7}
-            side={DoubleSide}
-          />
+          {/* 헬퍼는 톤매핑 영향을 받지 않도록 basic 재질 사용 */}
+          <meshBasicMaterial color={color} toneMapped={false} side={DoubleSide} />
         </mesh>
       )}
 
@@ -111,7 +117,13 @@ function LightItem({ light, showHelpers, selected, onSelect }: LightItemProps) {
       {showHelpers && selected && (
         <mesh position={light.position} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.4, 0.46, 32]} />
-          <meshBasicMaterial color="#ffffff" side={DoubleSide} transparent opacity={0.8} />
+          <meshBasicMaterial
+            color="#ffffff"
+            toneMapped={false}
+            side={DoubleSide}
+            transparent
+            opacity={0.85}
+          />
         </mesh>
       )}
     </group>
@@ -126,8 +138,11 @@ export function Lights() {
 
   return (
     <>
-      {/* 아주 약한 환경광 (완전 암부 방지) */}
-      <ambientLight intensity={0.06} />
+      {/*
+        환경광(바운스 근사). 물리 단위에서 ambientLight intensity 는
+        조도(lux)에 가깝게 동작한다. 완전 암부를 막는 미세한 값만.
+      */}
+      <ambientLight intensity={12} />
       {lights.map((light) => (
         <LightItem
           key={light.id}

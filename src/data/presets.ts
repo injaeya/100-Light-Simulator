@@ -95,58 +95,63 @@ export type FixtureType = 'softbox' | 'spot' | 'fresnel' | 'tube' | 'panel' | 'p
 export interface FixturePreset {
   type: FixtureType;
   label: string;
-  /** 기본 출력 (와트 상당) */
-  defaultIntensity: number;
+  /** 기본 광속 (루멘, lm) — 실제 광량 단위 */
+  defaultLumens: number;
   /** 기본 색온도 (K) */
   defaultKelvin: number;
-  /** 확산각 (도) — 스팟류에서 사용 */
+  /** 확산각(전각, 도) — 스팟류에서 사용 */
   defaultConeAngle: number;
-  /** 부드러움 0(하드)~1(소프트) */
+  /** 부드러움 0(하드)~1(소프트) — 그림자 페넘브라/확산에 반영 */
   softness: number;
   description: string;
 }
 
+/*
+ * 광속(lm) 값은 실제 촬영용 기구를 참고한 근사치.
+ * (예: 100W급 LED 소프트박스 ≈ 9,000 lm, 60W 백열 전구 ≈ 800 lm)
+ * 렌더링 시 luminousIntensity()로 빔 입체각에 따라 광도(cd)로 환산된다.
+ */
 export const FIXTURE_PRESETS: Record<FixtureType, FixturePreset> = {
   softbox: {
     type: 'softbox',
     label: '소프트박스',
-    defaultIntensity: 800,
+    defaultLumens: 9000,
     defaultKelvin: 5600,
     defaultConeAngle: 90,
-    softness: 0.9,
+    softness: 0.95,
     description: '부드럽고 넓은 확산광. 인물/인터뷰 키라이트에 적합.',
   },
   panel: {
     type: 'panel',
     label: 'LED 패널',
-    defaultIntensity: 500,
+    defaultLumens: 5000,
     defaultKelvin: 5600,
     defaultConeAngle: 110,
-    softness: 0.7,
+    softness: 0.75,
     description: '가변 색온도 LED 평판. 필/보조광으로 두루 사용.',
   },
   fresnel: {
     type: 'fresnel',
     label: '프레넬',
-    defaultIntensity: 1000,
+    defaultLumens: 15000,
     defaultKelvin: 3200,
-    defaultConeAngle: 45,
+    defaultConeAngle: 40,
     softness: 0.35,
     description: '집광/확산 조절 가능한 스포트. 백/림 라이트에 유용.',
   },
   spot: {
     type: 'spot',
     label: '스포트',
-    defaultIntensity: 1200,
+    defaultLumens: 20000,
     defaultKelvin: 5600,
-    defaultConeAngle: 25,
-    softness: 0.15,
+    defaultConeAngle: 22,
+    softness: 0.12,
     description: '좁고 강한 지향성 광. 강조/무대 효과광.',
   },
   tube: {
     type: 'tube',
     label: '튜브 라이트',
-    defaultIntensity: 300,
+    defaultLumens: 2200,
     defaultKelvin: 5600,
     defaultConeAngle: 120,
     softness: 0.8,
@@ -155,7 +160,7 @@ export const FIXTURE_PRESETS: Record<FixtureType, FixturePreset> = {
   point: {
     type: 'point',
     label: '포인트/전구',
-    defaultIntensity: 200,
+    defaultLumens: 800,
     defaultKelvin: 2700,
     defaultConeAngle: 360,
     softness: 0.5,

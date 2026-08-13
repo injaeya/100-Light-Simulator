@@ -2,9 +2,24 @@
  * LightsPanel.tsx — 조명 목록 + 추가 + 선택 조명 편집
  */
 import { FIXTURE_PRESETS, FIXTURE_TYPES, KELVIN_PRESETS } from '../../data/presets';
-import { kelvinToRGB, rgbToHex } from '../../lib/optics';
+import {
+  formatLux,
+  illuminance,
+  kelvinToRGB,
+  luminousIntensity,
+  rgbToHex,
+} from '../../lib/optics';
 import { useSimulatorStore } from '../../store/simulatorStore';
 import { Field, Panel, Slider } from './controls';
+
+/** 광원에서 피사체까지 직선거리 (m) */
+function distanceToSubject(position: [number, number, number], target: [number, number, number]): number {
+  return Math.hypot(
+    position[0] - target[0],
+    position[1] - target[1],
+    position[2] - target[2],
+  );
+}
 
 function LightEditor({ id }: { id: string }) {
   const light = useSimulatorStore((s) => s.lights.find((l) => l.id === id));
@@ -13,6 +28,11 @@ function LightEditor({ id }: { id: string }) {
 
   const swatch = rgbToHex(kelvinToRGB(light.kelvin));
   const isSpot = light.type !== 'point';
+
+  // 측광: 광속 → 광도(cd) → 피사체 조도(lux)
+  const candela = luminousIntensity(light.lumens, isSpot ? light.coneAngle : 360);
+  const dist = distanceToSubject(light.position, light.target);
+  const lux = illuminance(candela, dist);
 
   return (
     <div className="light-editor">
@@ -24,15 +44,27 @@ function LightEditor({ id }: { id: string }) {
         />
       </Field>
 
-      <Field label="출력" value={`${Math.round(light.intensity)} W`}>
+      <Field label="광속" value={`${light.lumens.toLocaleString()} lm`}>
         <Slider
           min={0}
-          max={2000}
-          step={10}
-          value={light.intensity}
-          onChange={(v) => updateLight(id, { intensity: v })}
+          max={30000}
+          step={100}
+          value={light.lumens}
+          onChange={(v) => updateLight(id, { lumens: v })}
         />
       </Field>
+
+      {/* 측광 리드아웃 */}
+      <div className="readout">
+        <div className="readout-row">
+          <span>광도</span>
+          <strong>{Math.round(candela).toLocaleString()} cd</strong>
+        </div>
+        <div className="readout-row">
+          <span>피사체 조도 ({dist.toFixed(1)}m)</span>
+          <strong>{formatLux(lux)}</strong>
+        </div>
+      </div>
 
       <Field
         label="색온도"

@@ -1,43 +1,81 @@
 /**
- * SceneView.tsx — 3D 뷰포트 (Canvas + 카메라 + 컨트롤)
+ * SceneView.tsx — 3D 뷰포트 (Canvas + 카메라 + 물리 기반 렌더링)
  */
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, ContactShadows } from '@react-three/drei';
-import { ACESFilmicToneMapping } from 'three';
+import {
+  OrbitControls,
+  PerspectiveCamera,
+  ContactShadows,
+  SoftShadows,
+  Environment,
+  Lightformer,
+} from '@react-three/drei';
+import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 import { fieldOfView } from '../../lib/optics';
 import { useSimulatorStore } from '../../store/simulatorStore';
 import { Space } from './Space';
 import { Subject } from './Subject';
 import { Lights } from './Lights';
+import { ExposureController } from './ExposureController';
 
 function CameraRig() {
   const camera = useSimulatorStore((s) => s.camera);
-  const exposureComp = useSimulatorStore((s) => s.exposureCompensation);
 
-  // 수직 화각을 three.js PerspectiveCamera fov 로 사용
+  // 수직 화각을 three.js PerspectiveCamera fov 로 사용 (렌즈 화각 정확 반영)
   const vfov = fieldOfView(camera.focalLength, camera.sensor).vertical;
-
-  // 노출 보정 → 톤매핑 노출로 반영 (스톱 → 배율)
-  const exposure = Math.pow(2, exposureComp);
 
   return (
     <PerspectiveCamera
       makeDefault
       fov={vfov}
-      position={[camera.subjectDistance * 0.9, 1.5, camera.subjectDistance]}
+      position={[camera.subjectDistance * 0.85, 1.55, camera.subjectDistance]}
       near={0.05}
       far={200}
-      onUpdate={(cam) => cam.updateProjectionMatrix()}
-      // exposure 는 gl 에서 처리하지만, 카메라 리렌더 트리거용으로 참조
-      userData={{ exposure }}
     />
+  );
+}
+
+/**
+ * 로컬 IBL(이미지 기반 조명) — 원격 HDRI 없이 Lightformer 로 구성.
+ * 사실적인 반사/바운스 앰비언트를 제공하되, 주 조명(3점)이 지배하도록 약하게.
+ */
+function StudioEnvironment() {
+  return (
+    <Environment resolution={256} frames={1} background={false} environmentIntensity={0.12}>
+      {/* 상단 대형 소프트 소스 (천장 바운스 근사) */}
+      <Lightformer
+        form="rect"
+        intensity={1.2}
+        position={[0, 6, 0]}
+        rotation={[Math.PI / 2, 0, 0]}
+        scale={[12, 12, 1]}
+        color="#ffffff"
+      />
+      {/* 정면 약한 필 */}
+      <Lightformer
+        form="rect"
+        intensity={0.5}
+        position={[0, 2, 8]}
+        rotation={[0, 0, 0]}
+        scale={[8, 5, 1]}
+        color="#cfd8ff"
+      />
+      {/* 측면 림 반사 */}
+      <Lightformer
+        form="rect"
+        intensity={0.6}
+        position={[-8, 3, -4]}
+        rotation={[0, Math.PI / 2, 0]}
+        scale={[6, 6, 1]}
+        color="#ffe9cf"
+      />
+    </Environment>
   );
 }
 
 export function SceneView() {
   const space = useSimulatorStore((s) => s.space);
   const selectLight = useSimulatorStore((s) => s.selectLight);
-  const exposureComp = useSimulatorStore((s) => s.exposureCompensation);
 
   return (
     <Canvas
@@ -46,11 +84,16 @@ export function SceneView() {
       gl={{
         antialias: true,
         toneMapping: ACESFilmicToneMapping,
-        toneMappingExposure: Math.pow(2, exposureComp),
+        outputColorSpace: SRGBColorSpace,
       }}
       onPointerMissed={() => selectLight(null)}
     >
-      <color attach="background" args={['#0b0b0f']} />
+      <color attach="background" args={['#0a0a0d']} />
+
+      {/* PCSS 소프트 섀도우 — 광원 크기에 따른 페넘브라 */}
+      <SoftShadows size={26} samples={16} focus={0.9} />
+
+      <ExposureController />
       <CameraRig />
       <OrbitControls
         makeDefault
@@ -61,6 +104,7 @@ export function SceneView() {
         enableDamping
       />
 
+      <StudioEnvironment />
       <Space spaceId={space} />
       <Subject />
       <Lights />
@@ -68,11 +112,11 @@ export function SceneView() {
       {/* 피사체 접지 그림자 보강 */}
       <ContactShadows
         position={[0, 0.01, 0]}
-        opacity={0.5}
-        scale={10}
-        blur={2.4}
-        far={4}
-        resolution={512}
+        opacity={0.6}
+        scale={12}
+        blur={2.6}
+        far={5}
+        resolution={1024}
         color="#000000"
       />
     </Canvas>
