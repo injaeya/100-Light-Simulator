@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SceneView } from './components/Scene/SceneView';
 import { PresetPanel } from './components/Panels/PresetPanel';
 import { CameraPanel } from './components/Panels/CameraPanel';
@@ -33,8 +33,14 @@ function PanelFor({ tab }: { tab: Tab }) {
 export default function App() {
   const view = useSimulatorStore((s) => s.view);
   const setView = useSimulatorStore((s) => s.setView);
+  const theme = useSimulatorStore((s) => s.theme);
+  const toggleTheme = useSimulatorStore((s) => s.toggleTheme);
   const [tab, setTab] = useState<Tab>('preset');
   const [expanded, setExpanded] = useState(true);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   return (
     <div className="app-shell">
@@ -46,9 +52,14 @@ export default function App() {
             <p className="brand-sub">촬영 조명 프리비주얼</p>
           </div>
         </div>
-        <div className="view-toggle">
-          <button className={`vt-btn ${view === 'cam' ? 'active' : ''}`} onClick={() => setView('cam')}>촬영뷰</button>
-          <button className={`vt-btn ${view === 'free' ? 'active' : ''}`} onClick={() => setView('free')}>자유뷰</button>
+        <div className="topbar-right">
+          <div className="view-toggle">
+            <button className={`vt-btn ${view === 'cam' ? 'active' : ''}`} onClick={() => setView('cam')}>촬영뷰</button>
+            <button className={`vt-btn ${view === 'free' ? 'active' : ''}`} onClick={() => setView('free')}>자유뷰</button>
+          </div>
+          <button className="theme-btn" onClick={toggleTheme} aria-label="테마 전환" title="라이트/다크 테마">
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
         </div>
       </header>
 

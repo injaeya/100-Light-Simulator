@@ -124,8 +124,7 @@ export interface SpacePreset {
   label: string;
   room: SimState['room'];
   env: SimState['env'];
-  /** 성별은 스토어가 유지하므로 공간 프리셋에는 없음 */
-  subj: Omit<SimState['subj'], 'gender'>;
+  subj: SimState['subj'];
   wins: () => WinSpec[];
 }
 

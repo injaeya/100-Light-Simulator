@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+const url = process.argv[2], out = process.argv[3];
+const vw = parseInt(process.argv[4] || '1440', 10), vh = parseInt(process.argv[5] || '900', 10);
+const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist'] });
+const page = await browser.newPage({ viewport: { width: vw, height: vh } });
+const errors = [];
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+page.on('pageerror', (e) => errors.push(e.message));
+await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+await page.waitForTimeout(3500);
+await page.locator('[aria-label="테마 전환"]').click();
+await page.waitForTimeout(1500);
+await page.screenshot({ path: out });
+console.log('ERRORS', errors.length ? errors.join(' | ') : 'none');
+await browser.close();

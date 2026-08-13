@@ -4,7 +4,6 @@
  */
 
 export type Pose = 'sit' | 'stand';
-export type Gender = 'male' | 'female';
 export type WallId = 'left' | 'right' | 'back' | 'front';
 export type SkyMode = 'day' | 'night';
 export type Sky = 'clear' | 'cloud' | 'overcast';
@@ -45,7 +44,6 @@ export interface SubjState {
   /** 눈높이(m) */
   eyeH: number;
   pose: Pose;
-  gender: Gender;
 }
 
 export interface RoomState {

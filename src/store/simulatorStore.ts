@@ -19,6 +19,18 @@ import { FIXTURES } from '../sim/fixtures';
 import { modsFor } from '../sim/modifiers';
 
 export type ViewMode = 'cam' | 'free';
+export type Theme = 'light' | 'dark';
+
+function initTheme(): Theme {
+  try {
+    const saved = localStorage.getItem('lp-theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+  } catch {
+    /* ignore */
+  }
+  if (typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: light)').matches) return 'light';
+  return 'dark';
+}
 
 let uid = 1;
 const nextId = () => uid++;
@@ -34,7 +46,7 @@ function makeInitialState(): SimState {
   const base: SimState = {
     cam: { az: 0, dist: lp.cam.dist, h: lp.cam.h, focal: lp.cam.focal },
     expo: { iso: 800, shutter: 1 / 50, f: 2.8, nd: 2, wb: 5600 },
-    subj: { ...space.subj, gender: 'female', pose: lp.subj.pose, eyeH: lp.subj.eyeH },
+    subj: { ...space.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
     room: { ...space.room },
     env: { ...space.env },
     wins: withIds<WinState>(space.wins()),
@@ -53,6 +65,7 @@ interface UIState {
   showHelpers: boolean;
   spaceKey: string;
   lightingKey: string;
+  theme: Theme;
 }
 
 interface Actions {
@@ -78,6 +91,7 @@ interface Actions {
 
   setView: (v: ViewMode) => void;
   toggleHelpers: () => void;
+  toggleTheme: () => void;
 }
 
 export type Store = SimState & UIState & Actions;
@@ -104,6 +118,7 @@ export const useSimulatorStore = create<Store>((set) => ({
   showHelpers: true,
   spaceKey: 'studio',
   lightingKey: 'interview',
+  theme: initTheme(),
 
   setCam: (patch) => set((s) => ({ cam: { ...s.cam, ...patch } })),
   setExpo: (patch) => set((s) => ({ expo: { ...s.expo, ...patch } })),
@@ -210,7 +225,7 @@ export const useSimulatorStore = create<Store>((set) => ({
         ...s,
         room: { ...P.room },
         env: { ...P.env },
-        subj: { ...P.subj, gender: s.subj.gender },
+        subj: { ...P.subj },
         wins: withIds<WinState>(P.wins()),
       };
       clampPlacement(base);
@@ -234,6 +249,16 @@ export const useSimulatorStore = create<Store>((set) => ({
 
   setView: (v) => set({ view: v }),
   toggleHelpers: () => set((s) => ({ showHelpers: !s.showHelpers })),
+  toggleTheme: () =>
+    set((s) => {
+      const theme: Theme = s.theme === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('lp-theme', theme);
+      } catch {
+        /* ignore */
+      }
+      return { theme };
+    }),
 }));
 
 /** 셀렉터 헬퍼: 현재 SimState만 추출 */

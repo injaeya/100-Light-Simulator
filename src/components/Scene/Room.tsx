@@ -127,10 +127,11 @@ export function Room({ sim }: { sim: SimState }) {
         <planeGeometry args={[room.w, room.d]} />
         <meshStandardMaterial color={lin(floorC[0], floorC[1], floorC[2])} roughness={0.85} />
       </mesh>
-      {/* 천장 */}
-      <mesh position={[0, room.h, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
+      {/* 천장 — 조명 조건(방 높이·바운스)에는 관여하되 화면에는 보이지 않음
+          (colorWrite/depthWrite 끔: 렌더/깊이에 안 그려져 시야를 가리지 않음) */}
+      <mesh position={[0, room.h, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[room.w, room.d]} />
-        <meshStandardMaterial color={ceilColor} roughness={0.97} side={DoubleSide} />
+        <meshStandardMaterial color={ceilColor} roughness={0.97} side={DoubleSide} colorWrite={false} depthWrite={false} />
       </mesh>
       {/* 벽 4면 */}
       {(['left', 'right', 'back', 'front'] as WallId[]).map((id) => (

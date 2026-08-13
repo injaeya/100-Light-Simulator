@@ -48,6 +48,7 @@ function ShotCamera({ sim }: { sim: SimState }) {
 export function SceneView() {
   const sim = useSim();
   const view = useSimulatorStore((s: Store) => s.view);
+  const theme = useSimulatorStore((s) => s.theme);
   const showHelpers = useSimulatorStore((s) => s.showHelpers);
   const selectedLightId = useSimulatorStore((s) => s.selectedLightId);
   const selectLight = useSimulatorStore((s) => s.selectLight);
@@ -64,7 +65,7 @@ export function SceneView() {
       gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, outputColorSpace: SRGBColorSpace, powerPreference: 'high-performance' }}
       onPointerMissed={() => selectLight(null)}
     >
-      <color attach="background" args={['#050507']} />
+      <color attach="background" args={[theme === 'light' ? '#c4c6cc' : '#050507']} />
       <PerspectiveCamera makeDefault fov={45} near={0.05} far={400} position={[4.6, 2.4, 5.2]} />
       <ExposureRig sim={sim} />
 
