@@ -17,6 +17,7 @@ import { LIGHTING_PRESETS, SPACE_PRESETS } from '../sim/presets';
 import { fitExposure } from '../sim/photometry';
 import { FIXTURES } from '../sim/fixtures';
 import { modsFor } from '../sim/modifiers';
+import { clampAperture, clampFocal, getLens, lensForFocal } from '../sim/lenses';
 
 export type ViewMode = 'cam' | 'free';
 export type Theme = 'light' | 'dark';
@@ -43,8 +44,9 @@ function withIds<T extends { id?: number }>(specs: Omit<T, 'id'>[]): T[] {
 function makeInitialState(): SimState {
   const space = SPACE_PRESETS.studio;
   const lp = LIGHTING_PRESETS.interview.make();
+  const lens = lensForFocal(lp.cam.focal);
   const base: SimState = {
-    cam: { az: 0, dist: lp.cam.dist, h: lp.cam.h, focal: lp.cam.focal },
+    cam: { az: 0, dist: lp.cam.dist, h: lp.cam.h, focal: clampFocal(getLens(lens), lp.cam.focal), lens },
     expo: { iso: 800, shutter: 1 / 50, f: 2.8, nd: 2, wb: 5600 },
     subj: { ...space.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
     room: { ...space.room },
@@ -55,7 +57,7 @@ function makeInitialState(): SimState {
   };
   const fit = fitExposure(base);
   base.expo.nd = fit.nd;
-  base.expo.f = fit.f;
+  base.expo.f = clampAperture(getLens(lens), base.cam.focal, fit.f);
   return base;
 }
 
@@ -75,6 +77,10 @@ interface UIState {
 
 interface Actions {
   setCam: (patch: Partial<CamState>) => void;
+  /** 초점거리 변경(줌) — 가변조리개 렌즈면 조리개도 유효 범위로 클램프 */
+  setFocal: (focal: number) => void;
+  /** 렌즈 교체 — 초점거리·조리개를 새 렌즈 스펙으로 클램프 */
+  setLens: (id: string) => void;
   setExpo: (patch: Partial<ExpoState>) => void;
   setSubj: (patch: Partial<SubjState>) => void;
   setRoom: (patch: Partial<RoomState>) => void;
@@ -130,6 +136,21 @@ export const useSimulatorStore = create<Store>((set) => ({
   theme: initTheme(),
 
   setCam: (patch) => set((s) => ({ cam: { ...s.cam, ...patch } })),
+  setFocal: (focal) =>
+    set((s) => {
+      const L = getLens(s.cam.lens);
+      const f = clampFocal(L, focal);
+      return { cam: { ...s.cam, focal: f }, expo: { ...s.expo, f: clampAperture(L, f, s.expo.f) } };
+    }),
+  setLens: (id) =>
+    set((s) => {
+      const L = getLens(id);
+      const focal = clampFocal(L, s.cam.focal);
+      return {
+        cam: { ...s.cam, lens: id, focal },
+        expo: { ...s.expo, f: clampAperture(L, focal, s.expo.f) },
+      };
+    }),
   setExpo: (patch) => set((s) => ({ expo: { ...s.expo, ...patch } })),
   setSubj: (patch) =>
     set((s) => {
@@ -209,9 +230,12 @@ export const useSimulatorStore = create<Store>((set) => ({
       const P = LIGHTING_PRESETS[key];
       if (!P) return s;
       const lp = P.make();
+      const lensId = lensForFocal(lp.cam.focal);
+      const L = getLens(lensId);
+      const focal = clampFocal(L, lp.cam.focal);
       const base: SimState = {
         ...s,
-        cam: { ...s.cam, dist: lp.cam.dist, h: lp.cam.h, focal: lp.cam.focal },
+        cam: { ...s.cam, dist: lp.cam.dist, h: lp.cam.h, focal, lens: lensId },
         subj: { ...s.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
         lights: withIds<LightState>(lp.lights),
       };
@@ -220,7 +244,7 @@ export const useSimulatorStore = create<Store>((set) => ({
         cam: base.cam,
         subj: base.subj,
         lights: base.lights,
-        expo: { ...s.expo, nd: fit.nd, f: fit.f },
+        expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, focal, fit.f) },
         lightingKey: key,
         selectedLightId: null,
       };
@@ -240,13 +264,14 @@ export const useSimulatorStore = create<Store>((set) => ({
       };
       clampPlacement(base);
       const fit = fitExposure(base);
+      const L = getLens(s.cam.lens);
       return {
         room: base.room,
         env: base.env,
         subj: base.subj,
         wins: base.wins,
         stage: base.stage,
-        expo: { ...s.expo, nd: fit.nd, f: fit.f },
+        expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, s.cam.focal, fit.f) },
         spaceKey: key,
         selectedWinId: null,
       };
@@ -255,7 +280,8 @@ export const useSimulatorStore = create<Store>((set) => ({
   fitExposureNow: () =>
     set((s) => {
       const fit = fitExposure(s);
-      return { expo: { ...s.expo, nd: fit.nd, f: fit.f } };
+      const L = getLens(s.cam.lens);
+      return { expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, s.cam.focal, fit.f) } };
     }),
 
   setView: (v) => set({ view: v }),

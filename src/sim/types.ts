@@ -19,8 +19,10 @@ export interface CamState {
   dist: number;
   /** 카메라 높이(m) */
   h: number;
-  /** 초점거리(풀프레임 mm) */
+  /** 초점거리(풀프레임 mm) — 장착 렌즈의 줌 범위 내 */
   focal: number;
+  /** 장착 렌즈 id (src/sim/lenses.ts) */
+  lens: string;
 }
 
 /** 노출 */
