@@ -115,7 +115,7 @@ export const FIXTURE_PRESETS: Record<FixtureType, FixturePreset> = {
   softbox: {
     type: 'softbox',
     label: '소프트박스',
-    defaultLumens: 9000,
+    defaultLumens: 12000,
     defaultKelvin: 5600,
     defaultConeAngle: 90,
     softness: 0.95,
@@ -124,7 +124,7 @@ export const FIXTURE_PRESETS: Record<FixtureType, FixturePreset> = {
   panel: {
     type: 'panel',
     label: 'LED 패널',
-    defaultLumens: 5000,
+    defaultLumens: 6000,
     defaultKelvin: 5600,
     defaultConeAngle: 110,
     softness: 0.75,

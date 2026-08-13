@@ -6,7 +6,6 @@ import {
   OrbitControls,
   PerspectiveCamera,
   ContactShadows,
-  SoftShadows,
   Environment,
   Lightformer,
 } from '@react-three/drei';
@@ -16,7 +15,8 @@ import { useSimulatorStore } from '../../store/simulatorStore';
 import { Space } from './Space';
 import { Subject } from './Subject';
 import { Lights } from './Lights';
-import { ExposureController } from './ExposureController';
+import { Effects } from './Effects';
+import { useExposure } from './useExposure';
 
 function CameraRig() {
   const camera = useSimulatorStore((s) => s.camera);
@@ -40,8 +40,14 @@ function CameraRig() {
  * 사실적인 반사/바운스 앰비언트를 제공하되, 주 조명(3점)이 지배하도록 약하게.
  */
 function StudioEnvironment() {
+  const exposure = useExposure();
   return (
-    <Environment resolution={256} frames={1} background={false} environmentIntensity={0.12}>
+    <Environment
+      resolution={256}
+      frames={1}
+      background={false}
+      environmentIntensity={0.12 * exposure}
+    >
       {/* 상단 대형 소프트 소스 (천장 바운스 근사) */}
       <Lightformer
         form="rect"
@@ -76,6 +82,7 @@ function StudioEnvironment() {
 export function SceneView() {
   const space = useSimulatorStore((s) => s.space);
   const selectLight = useSimulatorStore((s) => s.selectLight);
+  const postFx = useSimulatorStore((s) => s.postFx);
 
   return (
     <Canvas
@@ -90,10 +97,6 @@ export function SceneView() {
     >
       <color attach="background" args={['#0a0a0d']} />
 
-      {/* PCSS 소프트 섀도우 — 광원 크기에 따른 페넘브라 */}
-      <SoftShadows size={26} samples={16} focus={0.9} />
-
-      <ExposureController />
       <CameraRig />
       <OrbitControls
         makeDefault
@@ -119,6 +122,9 @@ export function SceneView() {
         resolution={1024}
         color="#000000"
       />
+
+      {/* 사진 실사급 포스트프로세싱 */}
+      {postFx && <Effects />}
     </Canvas>
   );
 }

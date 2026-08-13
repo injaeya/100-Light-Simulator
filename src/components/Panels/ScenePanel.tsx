@@ -12,6 +12,10 @@ export function ScenePanel() {
   const toggleHelpers = useSimulatorStore((s) => s.toggleHelpers);
   const exposureComp = useSimulatorStore((s) => s.exposureCompensation);
   const setExposureComp = useSimulatorStore((s) => s.setExposureCompensation);
+  const postFx = useSimulatorStore((s) => s.postFx);
+  const togglePostFx = useSimulatorStore((s) => s.togglePostFx);
+  const depthOfField = useSimulatorStore((s) => s.depthOfField);
+  const toggleDepthOfField = useSimulatorStore((s) => s.toggleDepthOfField);
 
   const current = SPACE_PRESETS.find((s) => s.id === space)!;
 
@@ -49,6 +53,21 @@ export function ScenePanel() {
       <label className="toggle-row">
         <input type="checkbox" checked={showHelpers} onChange={toggleHelpers} />
         <span>조명 기구 헬퍼 표시</span>
+      </label>
+
+      <label className="toggle-row">
+        <input type="checkbox" checked={postFx} onChange={togglePostFx} />
+        <span>실사 효과 (블룸·SSAO·비네팅·그레인)</span>
+      </label>
+
+      <label className="toggle-row">
+        <input
+          type="checkbox"
+          checked={depthOfField}
+          onChange={toggleDepthOfField}
+          disabled={!postFx}
+        />
+        <span>피사계 심도 (보케)</span>
       </label>
     </Panel>
   );

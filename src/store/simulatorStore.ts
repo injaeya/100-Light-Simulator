@@ -49,6 +49,10 @@ interface SimulatorState {
   /** 노출/뷰 옵션 */
   showHelpers: boolean;
   exposureCompensation: number;
+  /** 포스트프로세싱(실사 효과) 마스터 토글 */
+  postFx: boolean;
+  /** 피사계 심도(보케) 토글 */
+  depthOfField: boolean;
 
   /* actions */
   setSpace: (space: SpaceId) => void;
@@ -60,6 +64,8 @@ interface SimulatorState {
   selectLight: (id: string | null) => void;
   toggleHelpers: () => void;
   setExposureCompensation: (v: number) => void;
+  togglePostFx: () => void;
+  toggleDepthOfField: () => void;
   resetLights: () => void;
 }
 
@@ -86,13 +92,13 @@ function createLight(type: FixtureType, position: Vec3): Light {
 
 /** 기본 3점 조명 세팅 */
 function defaultThreePointLights(): Light[] {
-  const key = createLight('softbox', [3, 2.6, 3]);
+  const key = createLight('softbox', [2.6, 2.4, 2.6]);
   key.name = '키 라이트';
-  key.lumens = 9000;
+  key.lumens = 12000;
 
-  const fill = createLight('panel', [-3, 2, 2.5]);
+  const fill = createLight('panel', [-2.6, 1.9, 2.2]);
   fill.name = '필 라이트';
-  fill.lumens = 4000;
+  fill.lumens = 6000;
 
   const back = createLight('fresnel', [-1.5, 3.2, -3]);
   back.name = '백 라이트';
@@ -119,6 +125,8 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
   selectedLightId: null,
   showHelpers: true,
   exposureCompensation: 0,
+  postFx: true,
+  depthOfField: true,
 
   setSpace: (space) => set({ space }),
 
@@ -158,6 +166,10 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
   toggleHelpers: () => set((state) => ({ showHelpers: !state.showHelpers })),
 
   setExposureCompensation: (v) => set({ exposureCompensation: v }),
+
+  togglePostFx: () => set((state) => ({ postFx: !state.postFx })),
+
+  toggleDepthOfField: () => set((state) => ({ depthOfField: !state.depthOfField })),
 
   resetLights: () => set({ lights: defaultThreePointLights(), selectedLightId: null }),
 }));

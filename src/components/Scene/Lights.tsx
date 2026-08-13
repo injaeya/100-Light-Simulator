@@ -13,15 +13,17 @@ import { FIXTURE_PRESETS } from '../../data/presets';
 import { kelvinToRGB, luminousIntensity, rgbToHex } from '../../lib/optics';
 import type { Light } from '../../store/simulatorStore';
 import { useSimulatorStore } from '../../store/simulatorStore';
+import { useExposure } from './useExposure';
 
 interface LightItemProps {
   light: Light;
+  exposure: number;
   showHelpers: boolean;
   selected: boolean;
   onSelect: (id: string) => void;
 }
 
-function LightItem({ light, showHelpers, selected, onSelect }: LightItemProps) {
+function LightItem({ light, exposure, showHelpers, selected, onSelect }: LightItemProps) {
   const spotRef = useRef<ThreeSpotLight>(null);
   const targetObj = useMemo(() => new Object3D(), []);
   const color = rgbToHex(kelvinToRGB(light.kelvin));
@@ -53,8 +55,10 @@ function LightItem({ light, showHelpers, selected, onSelect }: LightItemProps) {
 
   const isOmni = light.type === 'point';
 
-  // 광속(lm) → 광도(cd). 물리 광원 intensity 로 그대로 사용.
-  const candela = luminousIntensity(light.lumens, isOmni ? 360 : light.coneAngle);
+  // 광속(lm) → 광도(cd). 카메라 노출을 곱해 HDR 입력에 반영
+  // (수학적으로 ACES(radiance × exposure) 와 동일).
+  const candela =
+    luminousIntensity(light.lumens, isOmni ? 360 : light.coneAngle) * exposure;
 
   // 기구 부드러움 → 페넘브라(빔 가장자리 감쇠). 소프트박스=1에 가깝게.
   const penumbra = Math.min(1, 0.15 + preset.softness * 0.85);
@@ -135,18 +139,20 @@ export function Lights() {
   const showHelpers = useSimulatorStore((s) => s.showHelpers);
   const selectedLightId = useSimulatorStore((s) => s.selectedLightId);
   const selectLight = useSimulatorStore((s) => s.selectLight);
+  const exposure = useExposure();
 
   return (
     <>
       {/*
-        환경광(바운스 근사). 물리 단위에서 ambientLight intensity 는
-        조도(lux)에 가깝게 동작한다. 완전 암부를 막는 미세한 값만.
+        환경광(바운스 근사). 완전 암부를 막는 미세한 값.
+        노출을 곱해 다른 광원과 동일한 스케일 유지.
       */}
-      <ambientLight intensity={12} />
+      <ambientLight intensity={6 * exposure} />
       {lights.map((light) => (
         <LightItem
           key={light.id}
           light={light}
+          exposure={exposure}
           showHelpers={showHelpers}
           selected={light.id === selectedLightId}
           onSelect={selectLight}
