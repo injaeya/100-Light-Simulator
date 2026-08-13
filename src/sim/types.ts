@@ -9,16 +9,35 @@ export type SkyMode = 'day' | 'night';
 export type Sky = 'clear' | 'cloud' | 'overcast';
 export type Season = 'summer' | 'mid' | 'winter';
 export type FloorTex = 'wood' | 'concrete' | 'carpet' | 'tile';
-export type Aim = 'subj' | 'bg';
+/** 조준 대상: 인물 | 배경 | 자유(월드 타깃) */
+export type Aim = 'subj' | 'bg' | 'free';
+/** 배치 모드: 인물 기준 극좌표 | 공간 자유배치(월드 XZ) */
+export type Place = 'stage' | 'free';
 
-/** 카메라 — 피사체 기준 극좌표 */
+/** 카메라 조준: 인물(스테이지) | 자유(월드 타깃) */
+export type CamAim = 'subj' | 'free';
+
+/** 카메라 — 다대(多臺) 지원, 조명과 동일한 배치/조준 모델 */
 export interface CamState {
-  /** 카메라 방위각(도, 피사체축 기준). 0=피사체가 렌즈 정면 */
+  id: number;
+  name: string;
+  /** 배치 모드: 인물 기준 극좌표 | 공간 자유배치 */
+  place: Place;
+  /** 카메라 방위각(도, 피사체축 기준). place='stage'에서 사용 */
   az: number;
-  /** 피사체까지 거리(m) */
+  /** 피사체까지 거리(m). place='stage'에서 사용 */
   dist: number;
-  /** 카메라 높이(m) */
+  /** 카메라 높이(m). 두 배치 모드 공용 */
   h: number;
+  /** place='free' 월드 좌표(x,z) */
+  x: number;
+  z: number;
+  /** 조준 대상 */
+  aim: CamAim;
+  /** aim='free' 조준 월드 타깃(tx,ty,tz) */
+  tx: number;
+  ty: number;
+  tz: number;
   /** 초점거리(풀프레임 mm) — 장착 렌즈의 줌 범위 내 */
   focal: number;
   /** 장착 렌즈 id (src/sim/lenses.ts) */
@@ -95,18 +114,30 @@ export interface LightState {
   /** 디머 0..100 */
   dim: number;
   kelvin: number;
-  /** 카메라축 기준 방위각(도). +90=카메라 오른쪽 */
+  /** 카메라축 기준 방위각(도). +90=카메라 오른쪽. place='stage'에서 사용 */
   az: number;
-  /** 발광면에서 얼굴까지 거리(m) */
+  /** 발광면에서 스테이지까지 거리(m). place='stage'에서 사용 */
   dist: number;
-  /** 조명 높이(m) */
+  /** 조명 높이(m). 두 배치 모드 공용 */
   h: number;
   shadow: boolean;
   aim: Aim;
+  /** 배치 모드 */
+  place: Place;
+  /** place='free' 월드 좌표(x,z). 높이는 h 공용 */
+  x: number;
+  z: number;
+  /** aim='free' 조준 월드 타깃(tx,ty,tz) */
+  tx: number;
+  ty: number;
+  tz: number;
 }
 
 export interface SimState {
-  cam: CamState;
+  /** 카메라 목록(다대). 활성 카메라가 촬영뷰·측광 기준축 */
+  cams: CamState[];
+  /** 활성(주) 카메라 id */
+  activeCamId: number;
   expo: ExpoState;
   subj: SubjState;
   room: RoomState;

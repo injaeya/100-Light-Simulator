@@ -6,7 +6,7 @@ import { useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, AdaptiveDpr } from '@react-three/drei';
 import { ACESFilmicToneMapping, PerspectiveCamera as ThreePerspectiveCamera, SRGBColorSpace } from 'three';
-import { camP, faceC } from '../../sim/coords';
+import { activeCam, camAim, camPos, faceC } from '../../sim/coords';
 import { analyze, toneMappingExposure } from '../../sim/photometry';
 import { useSimulatorStore, type Store } from '../../store/simulatorStore';
 import { useSim } from '../../store/useSim';
@@ -28,17 +28,18 @@ function ExposureRig({ sim }: { sim: SimState }) {
   return null;
 }
 
-/** 촬영 카메라: camP 위치에서 얼굴을 봄, 초점거리 → 수직화각 */
+/** 촬영 카메라: 활성 카메라 위치에서 조준점을 봄, 초점거리 → 수직화각 */
 function ShotCamera({ sim }: { sim: SimState }) {
   const cam = useThree((s) => s.camera);
   const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
-    const cp = camP(sim);
+    const C = activeCam(sim);
+    const cp = camPos(sim, C);
+    const at = camAim(sim, C);
     cam.position.set(cp.x, cp.y, cp.z);
-    // 조준은 스테이지 앵커(고정) — 프레임을 고정해 방·조명이 안 움직이고 피사체만 이동
-    cam.lookAt(sim.stage.x, sim.subj.eyeH, sim.stage.z);
+    cam.lookAt(at.x, at.y, at.z);
     if (cam instanceof ThreePerspectiveCamera) {
-      cam.fov = (2 * Math.atan(10.125 / sim.cam.focal) * 180) / Math.PI;
+      cam.fov = (2 * Math.atan(10.125 / C.focal) * 180) / Math.PI;
     }
     cam.updateProjectionMatrix();
     invalidate();

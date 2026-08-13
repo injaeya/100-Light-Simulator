@@ -11,11 +11,14 @@ import { Panel, Field, Slider, Segmented, Select } from './controls';
 
 export function LightsPanel() {
   const lights = useSimulatorStore((s) => s.lights);
+  const room = useSimulatorStore((s) => s.room);
   const selectedLightId = useSimulatorStore((s) => s.selectedLightId);
   const addLight = useSimulatorStore((s) => s.addLight);
   const removeLight = useSimulatorStore((s) => s.removeLight);
   const updateLight = useSimulatorStore((s) => s.updateLight);
   const selectLight = useSimulatorStore((s) => s.selectLight);
+
+  const hx = room.w / 2, hz = room.d / 2;
 
   const [addFix, setAddFix] = useState<string>(FIXTURE_KEYS[0]);
 
@@ -117,28 +120,64 @@ export function LightsPanel() {
               onChange={(v) => updateLight(selected.id, { kelvin: v })}
             />
           </Field>
-          <Field label="방위 az" value={`${selected.az}°`}>
-            <Slider
-              min={-180}
-              max={180}
-              step={1}
-              value={selected.az}
-              onChange={(v) => updateLight(selected.id, { az: v })}
+          <Field label="배치">
+            <Segmented<'stage' | 'free'>
+              options={[
+                { value: 'stage', label: '인물 기준' },
+                { value: 'free', label: '자유 배치' },
+              ]}
+              value={selected.place}
+              onChange={(v) => updateLight(selected.id, { place: v })}
             />
           </Field>
-          <Field label="거리 dist" value={`${selected.dist.toFixed(2)}m`}>
-            <Slider
-              min={0.3}
-              max={6}
-              step={0.05}
-              value={selected.dist}
-              onChange={(v) => updateLight(selected.id, { dist: v })}
-            />
-          </Field>
+
+          {selected.place === 'stage' ? (
+            <>
+              <Field label="방위 az" value={`${selected.az}°`}>
+                <Slider
+                  min={-180}
+                  max={180}
+                  step={1}
+                  value={selected.az}
+                  onChange={(v) => updateLight(selected.id, { az: v })}
+                />
+              </Field>
+              <Field label="거리 dist" value={`${selected.dist.toFixed(2)}m`}>
+                <Slider
+                  min={0.3}
+                  max={6}
+                  step={0.05}
+                  value={selected.dist}
+                  onChange={(v) => updateLight(selected.id, { dist: v })}
+                />
+              </Field>
+            </>
+          ) : (
+            <>
+              <Field label="위치 X (좌우)" value={`${selected.x.toFixed(2)}m`}>
+                <Slider
+                  min={-hx}
+                  max={hx}
+                  step={0.05}
+                  value={selected.x}
+                  onChange={(v) => updateLight(selected.id, { x: v })}
+                />
+              </Field>
+              <Field label="위치 Z (앞뒤)" value={`${selected.z.toFixed(2)}m`}>
+                <Slider
+                  min={-hz}
+                  max={hz}
+                  step={0.05}
+                  value={selected.z}
+                  onChange={(v) => updateLight(selected.id, { z: v })}
+                />
+              </Field>
+            </>
+          )}
           <Field label="높이 h" value={`${selected.h.toFixed(2)}m`}>
             <Slider
               min={0.3}
-              max={4}
+              max={Math.max(4, room.h - 0.1)}
               step={0.02}
               value={selected.h}
               onChange={(v) => updateLight(selected.id, { h: v })}
@@ -149,11 +188,25 @@ export function LightsPanel() {
               options={[
                 { value: 'subj', label: '인물' },
                 { value: 'bg', label: '배경' },
+                { value: 'free', label: '자유' },
               ]}
               value={selected.aim}
               onChange={(v) => updateLight(selected.id, { aim: v })}
             />
           </Field>
+          {selected.aim === 'free' && (
+            <>
+              <Field label="조준 X" value={`${selected.tx.toFixed(2)}m`}>
+                <Slider min={-hx} max={hx} step={0.05} value={selected.tx} onChange={(v) => updateLight(selected.id, { tx: v })} />
+              </Field>
+              <Field label="조준 Z" value={`${selected.tz.toFixed(2)}m`}>
+                <Slider min={-hz} max={hz} step={0.05} value={selected.tz} onChange={(v) => updateLight(selected.id, { tz: v })} />
+              </Field>
+              <Field label="조준 높이" value={`${selected.ty.toFixed(2)}m`}>
+                <Slider min={0} max={Math.max(3, room.h - 0.1)} step={0.02} value={selected.ty} onChange={(v) => updateLight(selected.id, { ty: v })} />
+              </Field>
+            </>
+          )}
           <Field label="그림자">
             <label className="toggle-row">
               <input

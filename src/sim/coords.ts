@@ -3,7 +3,7 @@
  * three.js Vector3 사용.
  */
 import { Vector3 } from 'three';
-import type { LightState, RoomState, SimState, WallId, WinState } from './types';
+import type { CamState, LightState, RoomState, SimState, WallId, WinState } from './types';
 
 export const D2R = Math.PI / 180;
 export const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -15,16 +15,48 @@ export const DIR = (deg: number) => V3(Math.sin(deg * D2R), 0, Math.cos(deg * D2
 export const subjP = (s: SimState) => V3(s.subj.x, 0, s.subj.z);
 /** 조명·카메라 위치 기준(고정 스테이지 앵커). 피사체 이동과 무관. */
 export const stageP = (s: SimState) => V3(s.stage.x, 0, s.stage.z);
-export const axisDeg = (s: SimState) => s.subj.yaw + s.cam.az;
-/** 카메라 위치는 스테이지 앵커 기준(고정), 조준은 피사체(faceC) */
-export const camP = (s: SimState) => stageP(s).addScaledVector(DIR(axisDeg(s)), s.cam.dist).setY(s.cam.h);
+
+/** 활성(주) 카메라 */
+export const activeCam = (s: SimState): CamState =>
+  s.cams.find((c) => c.id === s.activeCamId) ?? s.cams[0];
+
+/** 조명 스테이지 배치 기준축 = 피사체 방향 + 활성 카메라 방위 */
+export const axisDeg = (s: SimState) => s.subj.yaw + activeCam(s).az;
+
+/** 카메라 C 의 월드 위치 (free=월드XZ / stage=스테이지 극좌표) */
+export const camPos = (s: SimState, C: CamState) =>
+  C.place === 'free'
+    ? V3(C.x, C.h, C.z)
+    : stageP(s).addScaledVector(DIR(s.subj.yaw + C.az), C.dist).setY(C.h);
+
+/** 카메라 C 의 조준 타깃 (free=월드타깃 / subj=스테이지 눈높이) */
+export const camAim = (s: SimState, C: CamState) =>
+  C.aim === 'free' ? V3(C.tx, C.ty, C.tz) : V3(s.stage.x, s.subj.eyeH, s.stage.z);
+
+/** 활성 카메라 위치(하위호환) */
+export const camP = (s: SimState) => camPos(s, activeCam(s));
 export const faceC = (s: SimState) => V3(s.subj.x, s.subj.eyeH, s.subj.z);
 /** 조명 조준 기준점(고정 스테이지, 눈높이). 피사체 이동과 무관하게 조명 각도 유지 */
 export const stageFace = (s: SimState) => V3(s.stage.x, s.subj.eyeH, s.stage.z);
 export const normalAt = (s: SimState, d: number) => DIR(s.subj.yaw + d);
-/** 조명 위치는 스테이지 앵커 기준(고정), 조준은 피사체(faceC)/배경 */
+/**
+ * 조명 월드 위치.
+ * place='free'  → 월드 XZ(L.x,L.z)에 자유 배치, 높이 L.h
+ * place='stage' → 스테이지 앵커 기준 극좌표(방위 az·거리 dist·높이 h)
+ */
 export const lightVec = (s: SimState, L: LightState) =>
-  stageP(s).addScaledVector(DIR(axisDeg(s) + L.az), L.dist).setY(L.h);
+  L.place === 'free'
+    ? V3(L.x, L.h, L.z)
+    : stageP(s).addScaledVector(DIR(axisDeg(s) + L.az), L.dist).setY(L.h);
+
+/**
+ * 조명 조준 월드 타깃.
+ * aim='free' → 임의 월드 타깃(tx,ty,tz)
+ * aim='bg'   → 배경 벽면 점
+ * aim='subj' → 고정 스테이지(눈높이)
+ */
+export const lightAim = (s: SimState, L: LightState) =>
+  L.aim === 'free' ? V3(L.tx, L.ty, L.tz) : L.aim === 'bg' ? bgPoint(s) : stageFace(s);
 
 export interface Wall {
   origin: Vector3;

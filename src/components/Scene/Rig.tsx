@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { Object3D, type DirectionalLight, type SpotLight } from 'three';
-import { bgPoint, lightVec, stageFace } from '../../sim/coords';
+import { lightAim, lightVec, stageFace } from '../../sim/coords';
 import { lightQuality } from '../../sim/modifiers';
 import { FIXTURES } from '../../sim/fixtures';
 import { kelvinCSS, wbFactor } from '../../sim/kelvin';
@@ -40,8 +40,8 @@ function FixtureLight({
 }) {
   const ref = useRef<SpotLight>(null);
   const p = lightVec(sim, L);
-  // 조준은 고정 스테이지 기준 — 피사체를 옮겨도 조명 각도가 독립적으로 유지
-  const t = L.aim === 'bg' ? bgPoint(sim) : stageFace(sim);
+  // 조준 타깃(인물/배경/자유). 자유 배치·자유 조준 시 임의 방향
+  const t = lightAim(sim, L);
   const target = useTarget([t.x, t.y, t.z]);
   const cd = effCd(L);
   const kind = FIXTURES[L.fix].kind;

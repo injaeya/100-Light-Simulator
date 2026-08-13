@@ -6,7 +6,7 @@ import { Vector3 } from 'three';
 import type { LightState, SimState } from './types';
 import { FIXTURES } from './fixtures';
 import { MODIFIERS } from './modifiers';
-import { bgPoint, faceC, lightVec, nearestStop, normalAt } from './coords';
+import { faceC, lightAim, lightVec, nearestStop, normalAt } from './coords';
 import { sunHitsFace, windowData, type WindowData } from './daylight';
 
 /** 기재 유효 광도(cd) = cd × mult × dim% */
@@ -43,10 +43,12 @@ export function sources(s: SimState): { list: Source[]; wd: WindowData } {
     if (L.on) {
       const p = lightVec(s, L);
       let sp = 1;
-      if (L.aim === 'bg') {
-        const beam = bgPoint(s).sub(p).normalize();
+      // 조준이 얼굴을 벗어난 만큼 얼굴 도달 광량 감쇠(정렬도^4).
+      // aim='subj'는 스테이지=얼굴 방향이라 sp≈1, 'bg'는 최대 0.6로 억제.
+      if (L.aim !== 'subj') {
+        const beam = lightAim(s, L).clone().sub(p).normalize();
         const tf = faceC(s).clone().sub(p).normalize();
-        sp = Math.pow(Math.max(0, beam.dot(tf)), 4) * 0.6;
+        sp = Math.pow(Math.max(0, beam.dot(tf)), 4) * (L.aim === 'bg' ? 0.6 : 1);
       }
       out.push({ kind: 'fix', name: L.name, ref: L, pos: p, I: effCd(L), size: effSize(L), k: L.kelvin, spill: sp });
     }

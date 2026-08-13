@@ -20,6 +20,12 @@ const L = (o: Partial<LightSpec>): LightSpec => ({
   h: 1.9,
   shadow: true,
   aim: 'subj',
+  place: 'stage',
+  x: 0,
+  z: 0,
+  tx: 0,
+  ty: 1.2,
+  tz: 0,
   ...o,
 });
 

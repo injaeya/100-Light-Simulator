@@ -18,6 +18,7 @@ import { fitExposure } from '../sim/photometry';
 import { FIXTURES } from '../sim/fixtures';
 import { modsFor } from '../sim/modifiers';
 import { clampAperture, clampFocal, getLens, lensForFocal } from '../sim/lenses';
+import { activeCam, camAim, camPos, lightAim, lightVec } from '../sim/coords';
 
 export type ViewMode = 'cam' | 'free';
 export type Theme = 'light' | 'dark';
@@ -40,24 +41,52 @@ function withIds<T extends { id?: number }>(specs: Omit<T, 'id'>[]): T[] {
   return specs.map((sp) => ({ ...sp, id: nextId() }) as T);
 }
 
+/** 카메라 생성 — 방위·거리·높이·초점거리에서 렌즈 자동선택 */
+function makeCam(
+  name: string,
+  o: { az: number; dist: number; h: number; focal: number },
+  stage: { x: number; z: number },
+  eyeH: number,
+): CamState {
+  const lens = lensForFocal(o.focal);
+  return {
+    id: nextId(),
+    name,
+    place: 'stage',
+    az: o.az,
+    dist: o.dist,
+    h: o.h,
+    x: stage.x,
+    z: stage.z + o.dist,
+    aim: 'subj',
+    tx: stage.x,
+    ty: eyeH,
+    tz: stage.z,
+    focal: clampFocal(getLens(lens), o.focal),
+    lens,
+  };
+}
+
 /** 기본 상태 = 스튜디오 공간 + 인터뷰 조명 */
 function makeInitialState(): SimState {
   const space = SPACE_PRESETS.studio;
   const lp = LIGHTING_PRESETS.interview.make();
-  const lens = lensForFocal(lp.cam.focal);
+  const stage = { x: space.subj.x, z: space.subj.z };
+  const cam0 = makeCam('CAM 1', { az: 0, dist: lp.cam.dist, h: lp.cam.h, focal: lp.cam.focal }, stage, lp.subj.eyeH);
   const base: SimState = {
-    cam: { az: 0, dist: lp.cam.dist, h: lp.cam.h, focal: clampFocal(getLens(lens), lp.cam.focal), lens },
+    cams: [cam0],
+    activeCamId: cam0.id,
     expo: { iso: 800, shutter: 1 / 50, f: 2.8, nd: 2, wb: 5600 },
     subj: { ...space.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
     room: { ...space.room },
     env: { ...space.env },
     wins: withIds<WinState>(space.wins()),
     lights: withIds<LightState>(lp.lights),
-    stage: { x: space.subj.x, z: space.subj.z },
+    stage,
   };
   const fit = fitExposure(base);
   base.expo.nd = fit.nd;
-  base.expo.f = clampAperture(getLens(lens), base.cam.focal, fit.f);
+  base.expo.f = clampAperture(getLens(cam0.lens), cam0.focal, fit.f);
   return base;
 }
 
@@ -76,10 +105,19 @@ interface UIState {
 }
 
 interface Actions {
+  /** 활성 카메라 패치 */
   setCam: (patch: Partial<CamState>) => void;
-  /** 초점거리 변경(줌) — 가변조리개 렌즈면 조리개도 유효 범위로 클램프 */
+  /** 임의 카메라 패치(플랜뷰 드래그 등) */
+  updateCam: (id: number, patch: Partial<CamState>) => void;
+  /** 카메라 추가(활성 복제) */
+  addCam: () => void;
+  /** 카메라 삭제(최소 1대 유지) */
+  removeCam: (id: number) => void;
+  /** 활성 카메라 지정 */
+  selectCam: (id: number) => void;
+  /** 초점거리 변경(줌) — 가변조리개 렌즈면 조리개도 유효 범위로 클램프. 활성 카메라 */
   setFocal: (focal: number) => void;
-  /** 렌즈 교체 — 초점거리·조리개를 새 렌즈 스펙으로 클램프 */
+  /** 렌즈 교체 — 초점거리·조리개를 새 렌즈 스펙으로 클램프. 활성 카메라 */
   setLens: (id: string) => void;
   setExpo: (patch: Partial<ExpoState>) => void;
   setSubj: (patch: Partial<SubjState>) => void;
@@ -109,6 +147,35 @@ interface Actions {
 
 export type Store = SimState & UIState & Actions;
 
+/** 1축 좌표를 방 절반(size/2) 안쪽 여백 m 로 클램프 */
+function clampPlacement1(v: number, size: number, m: number): number {
+  return Math.min(size / 2 - m, Math.max(-size / 2 + m, v));
+}
+
+/** 카메라 패치: 모드 전환 시 현재 월드값으로 시드(점프 방지) + 방 안 클램프 */
+function seedClampCam(s: SimState, c: CamState, patch: Partial<CamState>): CamState {
+  const next = { ...c, ...patch };
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  if (patch.place === 'free' && c.place !== 'free') {
+    const wp = camPos(s, c);
+    if (patch.x === undefined) next.x = r2(wp.x);
+    if (patch.z === undefined) next.z = r2(wp.z);
+  }
+  if (patch.aim === 'free' && c.aim !== 'free') {
+    const at = camAim(s, c);
+    if (patch.tx === undefined) next.tx = r2(at.x);
+    if (patch.tz === undefined) next.tz = r2(at.z);
+    if (patch.ty === undefined) next.ty = r2(at.y);
+  }
+  const R = s.room, m = 0.12;
+  next.x = clampPlacement1(next.x, R.w, m);
+  next.z = clampPlacement1(next.z, R.d, m);
+  next.tx = clampPlacement1(next.tx, R.w, m);
+  next.tz = clampPlacement1(next.tz, R.d, m);
+  next.ty = Math.min(R.h - 0.05, Math.max(0, next.ty));
+  return next;
+}
+
 /** 방 경계 안으로 피사체·창 클램프 */
 function clampPlacement(s: SimState) {
   const R = s.room, m = 0.25;
@@ -125,7 +192,7 @@ function clampPlacement(s: SimState) {
 
 export const useSimulatorStore = create<Store>((set) => ({
   ...makeInitialState(),
-  view: 'cam',
+  view: 'free',
   selectedLightId: null,
   selectedWinId: null,
   showHelpers: true,
@@ -135,19 +202,54 @@ export const useSimulatorStore = create<Store>((set) => ({
   lightingKey: 'interview',
   theme: initTheme(),
 
-  setCam: (patch) => set((s) => ({ cam: { ...s.cam, ...patch } })),
+  updateCam: (id, patch) =>
+    set((s) => ({ cams: s.cams.map((c) => (c.id === id ? seedClampCam(s, c, patch) : c)) })),
+  setCam: (patch) =>
+    set((s) => ({ cams: s.cams.map((c) => (c.id === s.activeCamId ? seedClampCam(s, c, patch) : c)) })),
+  addCam: () =>
+    set((s) => {
+      const A = activeCam(s);
+      const cam: CamState = {
+        ...A,
+        id: nextId(),
+        name: `CAM ${s.cams.length + 1}`,
+        // 겹치지 않게 방위 약간 회전(스테이지 배치) — 자유 배치면 위치를 옆으로
+        az: A.place === 'stage' ? A.az + 35 : A.az,
+        x: A.x + 0.8,
+      };
+      return { cams: [...s.cams, seedClampCam(s, cam, {})], activeCamId: cam.id };
+    }),
+  removeCam: (id) =>
+    set((s) => {
+      if (s.cams.length <= 1) return s;
+      const cams = s.cams.filter((c) => c.id !== id);
+      const activeCamId = s.activeCamId === id ? cams[0].id : s.activeCamId;
+      return { cams, activeCamId };
+    }),
+  selectCam: (id) =>
+    set((s) => {
+      const C = s.cams.find((c) => c.id === id);
+      if (!C) return s;
+      const L = getLens(C.lens);
+      return { activeCamId: id, expo: { ...s.expo, f: clampAperture(L, C.focal, s.expo.f) } };
+    }),
   setFocal: (focal) =>
     set((s) => {
-      const L = getLens(s.cam.lens);
+      const A = activeCam(s);
+      const L = getLens(A.lens);
       const f = clampFocal(L, focal);
-      return { cam: { ...s.cam, focal: f }, expo: { ...s.expo, f: clampAperture(L, f, s.expo.f) } };
+      return {
+        cams: s.cams.map((c) => (c.id === A.id ? { ...c, focal: f } : c)),
+        expo: { ...s.expo, f: clampAperture(L, f, s.expo.f) },
+      };
     }),
   setLens: (id) =>
     set((s) => {
+      const A = activeCam(s);
       const L = getLens(id);
-      const focal = clampFocal(L, s.cam.focal);
+      const focal = clampFocal(L, A.focal);
       return {
-        cam: { ...s.cam, lens: id, focal },
+        cams: s.cams.map((c) => (c.id === A.id ? { ...c, lens: id, focal } : c)),
         expo: { ...s.expo, f: clampAperture(L, focal, s.expo.f) },
       };
     }),
@@ -183,6 +285,10 @@ export const useSimulatorStore = create<Store>((set) => ({
         h: 1.9,
         shadow: true,
         aim: 'subj',
+        place: 'stage',
+        // free 전환용 초기 시드(스테이지 앞쪽) — 조준은 스테이지
+        x: s.stage.x, z: s.stage.z + 1.5,
+        tx: s.stage.x, ty: s.subj.eyeH, tz: s.stage.z,
       };
       return { lights: [...s.lights, light], selectedLightId: light.id };
     }),
@@ -200,6 +306,27 @@ export const useSimulatorStore = create<Store>((set) => ({
         if (patch.fix && !modsFor(patch.fix).includes(next.mod)) {
           next.mod = modsFor(patch.fix)[0];
         }
+        const r2 = (v: number) => Math.round(v * 100) / 100;
+        // 배치 stage→free 전환: 현재 월드 위치로 시드(점프 방지)
+        if (patch.place === 'free' && l.place !== 'free') {
+          const wp = lightVec(s, l);
+          if (patch.x === undefined) next.x = r2(wp.x);
+          if (patch.z === undefined) next.z = r2(wp.z);
+        }
+        // 조준 →free 전환: 현재 조준점으로 시드
+        if (patch.aim === 'free' && l.aim !== 'free') {
+          const at = lightAim(s, l);
+          if (patch.tx === undefined) next.tx = r2(at.x);
+          if (patch.tz === undefined) next.tz = r2(at.z);
+          if (patch.ty === undefined) next.ty = r2(at.y);
+        }
+        // 월드 좌표는 방 안으로 클램프
+        const R = s.room, m = 0.12;
+        next.x = clampPlacement1(next.x, R.w, m);
+        next.z = clampPlacement1(next.z, R.d, m);
+        next.tx = clampPlacement1(next.tx, R.w, m);
+        next.tz = clampPlacement1(next.tz, R.d, m);
+        next.ty = Math.min(R.h - 0.05, Math.max(0, next.ty));
         return next;
       }),
     })),
@@ -230,18 +357,23 @@ export const useSimulatorStore = create<Store>((set) => ({
       const P = LIGHTING_PRESETS[key];
       if (!P) return s;
       const lp = P.make();
+      const A = activeCam(s);
       const lensId = lensForFocal(lp.cam.focal);
       const L = getLens(lensId);
       const focal = clampFocal(L, lp.cam.focal);
+      // 프리셋 카메라 값은 활성 카메라에만 적용
+      const cams = s.cams.map((c) =>
+        c.id === A.id ? { ...c, dist: lp.cam.dist, h: lp.cam.h, focal, lens: lensId } : c,
+      );
       const base: SimState = {
         ...s,
-        cam: { ...s.cam, dist: lp.cam.dist, h: lp.cam.h, focal, lens: lensId },
+        cams,
         subj: { ...s.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
         lights: withIds<LightState>(lp.lights),
       };
       const fit = fitExposure(base);
       return {
-        cam: base.cam,
+        cams,
         subj: base.subj,
         lights: base.lights,
         expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, focal, fit.f) },
@@ -264,14 +396,15 @@ export const useSimulatorStore = create<Store>((set) => ({
       };
       clampPlacement(base);
       const fit = fitExposure(base);
-      const L = getLens(s.cam.lens);
+      const A = activeCam(s);
+      const L = getLens(A.lens);
       return {
         room: base.room,
         env: base.env,
         subj: base.subj,
         wins: base.wins,
         stage: base.stage,
-        expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, s.cam.focal, fit.f) },
+        expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, A.focal, fit.f) },
         spaceKey: key,
         selectedWinId: null,
       };
@@ -280,8 +413,9 @@ export const useSimulatorStore = create<Store>((set) => ({
   fitExposureNow: () =>
     set((s) => {
       const fit = fitExposure(s);
-      const L = getLens(s.cam.lens);
-      return { expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, s.cam.focal, fit.f) } };
+      const A = activeCam(s);
+      const L = getLens(A.lens);
+      return { expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, A.focal, fit.f) } };
     }),
 
   setView: (v) => set({ view: v }),
@@ -302,5 +436,15 @@ export const useSimulatorStore = create<Store>((set) => ({
 
 /** 셀렉터 헬퍼: 현재 SimState만 추출 */
 export function pickSimState(s: Store): SimState {
-  return { cam: s.cam, expo: s.expo, subj: s.subj, room: s.room, env: s.env, wins: s.wins, lights: s.lights, stage: s.stage };
+  return {
+    cams: s.cams,
+    activeCamId: s.activeCamId,
+    expo: s.expo,
+    subj: s.subj,
+    room: s.room,
+    env: s.env,
+    wins: s.wins,
+    lights: s.lights,
+    stage: s.stage,
+  };
 }

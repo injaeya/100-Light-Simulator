@@ -6,7 +6,8 @@ import { useSimulatorStore } from './simulatorStore';
 import type { SimState } from '../sim/types';
 
 export function useSim(): SimState {
-  const cam = useSimulatorStore((s) => s.cam);
+  const cams = useSimulatorStore((s) => s.cams);
+  const activeCamId = useSimulatorStore((s) => s.activeCamId);
   const expo = useSimulatorStore((s) => s.expo);
   const subj = useSimulatorStore((s) => s.subj);
   const room = useSimulatorStore((s) => s.room);
@@ -14,5 +15,8 @@ export function useSim(): SimState {
   const wins = useSimulatorStore((s) => s.wins);
   const lights = useSimulatorStore((s) => s.lights);
   const stage = useSimulatorStore((s) => s.stage);
-  return useMemo(() => ({ cam, expo, subj, room, env, wins, lights, stage }), [cam, expo, subj, room, env, wins, lights, stage]);
+  return useMemo(
+    () => ({ cams, activeCamId, expo, subj, room, env, wins, lights, stage }),
+    [cams, activeCamId, expo, subj, room, env, wins, lights, stage],
+  );
 }
