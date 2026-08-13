@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { Object3D, type DirectionalLight, type SpotLight } from 'three';
-import { bgPoint, faceC, lightVec } from '../../sim/coords';
+import { bgPoint, lightVec, stageFace } from '../../sim/coords';
 import { lightQuality } from '../../sim/modifiers';
 import { FIXTURES } from '../../sim/fixtures';
 import { kelvinCSS, wbFactor } from '../../sim/kelvin';
@@ -40,7 +40,8 @@ function FixtureLight({
 }) {
   const ref = useRef<SpotLight>(null);
   const p = lightVec(sim, L);
-  const t = L.aim === 'bg' ? bgPoint(sim) : faceC(sim);
+  // 조준은 고정 스테이지 기준 — 피사체를 옮겨도 조명 각도가 독립적으로 유지
+  const t = L.aim === 'bg' ? bgPoint(sim) : stageFace(sim);
   const target = useTarget([t.x, t.y, t.z]);
   const cd = effCd(L);
   const kind = FIXTURES[L.fix].kind;
@@ -104,7 +105,7 @@ function FixtureLight({
 
 /** 창문 확산광 (면광원 근사 → 넓은 스포트) */
 function WindowLights({ sim, analysis }: { sim: SimState; analysis: Analysis }) {
-  const face = faceC(sim);
+  const face = stageFace(sim);
   return (
     <>
       {analysis.wd.wins.map((w) => {
@@ -132,7 +133,7 @@ function WindowLight({ pos, face, intensity, color }: { pos: [number, number, nu
 /** 태양 직사광 */
 function Sun({ sim, analysis }: { sim: SimState; analysis: Analysis }) {
   const ref = useRef<DirectionalLight>(null);
-  const face = faceC(sim);
+  const face = stageFace(sim);
   const sv = analysis.wd.sv;
   const on = analysis.wd.sunLux > 10 && !analysis.wd.sk.night;
   const pos: [number, number, number] = [face.x + sv.x * 30, face.y + sv.y * 30, face.z + sv.z * 30];

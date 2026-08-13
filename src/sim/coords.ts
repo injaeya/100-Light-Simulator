@@ -19,6 +19,8 @@ export const axisDeg = (s: SimState) => s.subj.yaw + s.cam.az;
 /** 카메라 위치는 스테이지 앵커 기준(고정), 조준은 피사체(faceC) */
 export const camP = (s: SimState) => stageP(s).addScaledVector(DIR(axisDeg(s)), s.cam.dist).setY(s.cam.h);
 export const faceC = (s: SimState) => V3(s.subj.x, s.subj.eyeH, s.subj.z);
+/** 조명 조준 기준점(고정 스테이지, 눈높이). 피사체 이동과 무관하게 조명 각도 유지 */
+export const stageFace = (s: SimState) => V3(s.stage.x, s.subj.eyeH, s.stage.z);
 export const normalAt = (s: SimState, d: number) => DIR(s.subj.yaw + d);
 /** 조명 위치는 스테이지 앵커 기준(고정), 조준은 피사체(faceC)/배경 */
 export const lightVec = (s: SimState, L: LightState) =>
@@ -42,9 +44,9 @@ export function walls(room: RoomState, orient: number): Record<WallId, Wall> {
   };
 }
 
-/** 피사체가 등진 쪽 벽면의 한 점 (배경 조준용) */
+/** 스테이지 뒤쪽 벽면의 한 점 (배경 조준용, 고정) — 피사체 이동과 무관 */
 export function bgPoint(s: SimState): Vector3 {
-  const R = s.room, p = subjP(s), d = DIR(s.subj.yaw + 180);
+  const R = s.room, p = stageP(s), d = DIR(s.subj.yaw + 180);
   let t = 1e9;
   if (Math.abs(d.x) > 1e-4) t = Math.min(t, ((d.x > 0 ? R.w / 2 : -R.w / 2) - p.x) / d.x);
   if (Math.abs(d.z) > 1e-4) t = Math.min(t, ((d.z > 0 ? R.d / 2 : -R.d / 2) - p.z) / d.z);
