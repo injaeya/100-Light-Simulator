@@ -14,6 +14,8 @@ export function PresetPanel() {
   const toggleHelpers = useSimulatorStore((s) => s.toggleHelpers);
   const showBeams = useSimulatorStore((s) => s.showBeams);
   const toggleBeams = useSimulatorStore((s) => s.toggleBeams);
+  const showPlan = useSimulatorStore((s) => s.showPlan);
+  const togglePlan = useSimulatorStore((s) => s.togglePlan);
 
   const spaceOptions = Object.keys(SPACE_PRESETS).map((k) => ({
     value: k,
@@ -40,6 +42,10 @@ export function PresetPanel() {
         <label className="toggle-row">
           <input type="checkbox" checked={showBeams} onChange={toggleBeams} />
           <span>빔 범위 그물 (선택 조명)</span>
+        </label>
+        <label className="toggle-row">
+          <input type="checkbox" checked={showPlan} onChange={togglePlan} />
+          <span>배치도 (상부)</span>
         </label>
       </Field>
       <p className="hint">조명을 선택하면 그 조명의 빔 범위가 그물로 표시됩니다.</p>

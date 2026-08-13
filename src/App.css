@@ -77,6 +77,38 @@
   pointer-events: none; white-space: nowrap;
 }
 
+/* ---------- 배치도(플랜뷰) 오버레이 ---------- */
+.plan-view {
+  position: absolute; top: 12px; right: 12px; z-index: 20;
+  width: 232px;
+  background: color-mix(in srgb, var(--bg-panel-2) 88%, transparent);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 8px 6px; backdrop-filter: blur(6px);
+  box-shadow: 0 4px 18px rgba(0,0,0,.35);
+  user-select: none;
+}
+.plan-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; color: var(--text-dim); padding: 0 2px 4px; }
+.plan-sub { font-size: 10px; color: var(--text-faint); }
+.plan-svg { width: 100%; height: auto; display: block; }
+.plan-room { fill: color-mix(in srgb, var(--accent) 6%, transparent); stroke: var(--border-strong); stroke-width: 1.4; }
+.plan-win { stroke: #6cc0ff; stroke-width: 3.2; stroke-linecap: round; }
+.plan-stage { fill: none; stroke: var(--accent-2); stroke-width: 1.4; }
+.plan-stage-cross { stroke: var(--accent-2); stroke-width: 1; }
+.plan-subj { fill: var(--accent); stroke: #fff; stroke-width: 1; }
+.plan-subj-dir { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+.plan-cam { fill: var(--text); stroke: none; }
+.plan-cam-line { stroke: var(--text-faint); stroke-width: 1; stroke-dasharray: 3 2; }
+.plan-legend { display: flex; gap: 10px; justify-content: center; margin-top: 4px; font-size: 10px; color: var(--text-dim); }
+.plan-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.plan-legend .lg { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.plan-legend .lg-subj { background: var(--accent); }
+.plan-legend .lg-stage { background: var(--accent-2); }
+.plan-legend .lg-cam { background: var(--text); border-radius: 1px; }
+
+@media (max-width: 640px) {
+  .plan-view { width: 168px; top: 8px; right: 8px; }
+}
+
 /* ---------- Panel ---------- */
 /* flex-shrink:0 — 사이드바(flex-column) 안에서 패널이 눌려 내용이 잘리지 않게. 대신 넘치면 사이드바가 스크롤 */
 .panel { background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; }
