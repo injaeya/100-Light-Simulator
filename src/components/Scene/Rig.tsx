@@ -3,14 +3,15 @@
  * 광도(cd)를 three 물리 광원 intensity 로, WB 보정 색으로.
  */
 import { useEffect, useMemo, useRef } from 'react';
-import { DoubleSide, Object3D, type DirectionalLight, type SpotLight } from 'three';
+import { Object3D, type DirectionalLight, type SpotLight } from 'three';
 import { bgPoint, faceC, lightVec } from '../../sim/coords';
 import { DEFAULT_ANGLE, MOD_ANGLE } from '../../sim/modifiers';
 import { FIXTURES } from '../../sim/fixtures';
-import { kelvinRGB, wbFactor } from '../../sim/kelvin';
+import { wbFactor } from '../../sim/kelvin';
 import { effCd, effSize, type Analysis } from '../../sim/photometry';
 import type { LightState, SimState } from '../../sim/types';
 import { lin } from './sceneColor';
+import { FixtureModel } from './FixtureModel';
 
 function useTarget(pos: [number, number, number]) {
   const obj = useMemo(() => new Object3D(), []);
@@ -39,23 +40,15 @@ function FixtureLight({
   const t = L.aim === 'bg' ? bgPoint(sim) : faceC(sim);
   const target = useTarget([t.x, t.y, t.z]);
   const cd = effCd(L);
-  const sz = effSize(L);
   const kind = FIXTURES[L.fix].kind;
   const [angle, penumbra] = MOD_ANGLE[L.mod] || DEFAULT_ANGLE;
   const wf = wbFactor(L.kelvin, sim.expo.wb);
   const col = lin(wf.r, wf.g, wf.b);
+  const shadowRadius = Math.min(18, Math.max(0.6, (effSize(L) / Math.max(0.3, L.dist)) * 13));
 
   useEffect(() => {
     if (ref.current) ref.current.target = target;
   }, [target]);
-
-  // 발광면 방사휘도(에미시브). 톤매핑을 타므로 노출과 함께 감쇠 (상한으로 과노출 방지)
-  const A = Math.max(0.006, sz * sz * 0.72);
-  const rad = L.on ? Math.min(2000, cd / A) : 0;
-  const kc = kelvinRGB(L.kelvin);
-  const emissive = lin(rad * kc.r + 0.004, rad * kc.g + 0.004, rad * kc.b + 0.004);
-
-  const shadowRadius = Math.min(18, Math.max(0.6, (sz / Math.max(0.3, L.dist)) * 13));
 
   return (
     <group>
@@ -79,26 +72,15 @@ function FixtureLight({
           />
         </>
       )}
-      {/* 기재 3D 표현 */}
+      {/* 실제 기자재 3D 모델 (스탠드+바디+모디파이어+발광면) */}
       {showHelpers && (
-        <group position={[p.x, p.y, p.z]} onClick={(e) => { e.stopPropagation(); onSelect(L.id); }}>
-          <mesh>
-            {kind === 'tube' ? (
-              <cylinderGeometry args={[0.03, 0.03, FIXTURES[L.fix].len || 1, 12]} />
-            ) : kind === 'bounce' ? (
-              <boxGeometry args={[sz, sz, 0.03]} />
-            ) : (
-              <boxGeometry args={[Math.max(0.12, sz * 0.7), Math.max(0.12, sz * 0.7), 0.1]} />
-            )}
-            <meshBasicMaterial color={emissive} toneMapped side={DoubleSide} />
-          </mesh>
-          {selected && (
-            <mesh>
-              <sphereGeometry args={[Math.max(0.16, sz * 0.5), 16, 12]} />
-              <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} />
-            </mesh>
-          )}
-        </group>
+        <FixtureModel
+          L={L}
+          p={[p.x, p.y, p.z]}
+          t={[t.x, t.y, t.z]}
+          selected={selected}
+          onSelect={onSelect}
+        />
       )}
     </group>
   );

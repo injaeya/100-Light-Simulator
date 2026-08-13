@@ -65,7 +65,7 @@ export function SceneView() {
       onPointerMissed={() => selectLight(null)}
     >
       <color attach="background" args={['#050507']} />
-      <PerspectiveCamera makeDefault fov={45} near={0.05} far={400} position={[3, 1.5, 3]} />
+      <PerspectiveCamera makeDefault fov={45} near={0.05} far={400} position={[4.6, 2.4, 5.2]} />
       <ExposureRig sim={sim} />
 
       {view === 'cam' ? (

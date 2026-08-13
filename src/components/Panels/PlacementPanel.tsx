@@ -2,7 +2,7 @@
  * PlacementPanel.tsx — 피사체 · 방 · 환경(자연광) 배치 컨트롤
  */
 import { useSimulatorStore } from '../../store/simulatorStore';
-import type { FloorTex, Pose, Season, Sky, SkyMode } from '../../sim/types';
+import type { FloorTex, Gender, Pose, Season, Sky, SkyMode } from '../../sim/types';
 import { Panel, Field, Slider, Segmented, Select } from './controls';
 
 export function PlacementPanel() {
@@ -16,6 +16,16 @@ export function PlacementPanel() {
   return (
     <Panel title="공간 · 환경">
       {/* ----- 피사체 ----- */}
+      <Field label="성별">
+        <Segmented<Gender>
+          options={[
+            { value: 'female', label: '여성' },
+            { value: 'male', label: '남성' },
+          ]}
+          value={subj.gender}
+          onChange={(v) => setSubj({ gender: v })}
+        />
+      </Field>
       <Field label="자세">
         <Segmented<Pose>
           options={[

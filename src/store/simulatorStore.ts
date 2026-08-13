@@ -34,7 +34,7 @@ function makeInitialState(): SimState {
   const base: SimState = {
     cam: { az: 0, dist: lp.cam.dist, h: lp.cam.h, focal: lp.cam.focal },
     expo: { iso: 800, shutter: 1 / 50, f: 2.8, nd: 2, wb: 5600 },
-    subj: { ...space.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
+    subj: { ...space.subj, gender: 'female', pose: lp.subj.pose, eyeH: lp.subj.eyeH },
     room: { ...space.room },
     env: { ...space.env },
     wins: withIds<WinState>(space.wins()),
@@ -210,7 +210,7 @@ export const useSimulatorStore = create<Store>((set) => ({
         ...s,
         room: { ...P.room },
         env: { ...P.env },
-        subj: { ...P.subj },
+        subj: { ...P.subj, gender: s.subj.gender },
         wins: withIds<WinState>(P.wins()),
       };
       clampPlacement(base);
