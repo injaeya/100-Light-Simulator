@@ -126,7 +126,7 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
   showHelpers: true,
   exposureCompensation: 0,
   postFx: true,
-  depthOfField: true,
+  depthOfField: false,
 
   setSpace: (space) => set({ space }),
 

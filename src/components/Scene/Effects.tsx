@@ -48,17 +48,25 @@ export function Effects() {
   );
 
   return (
-    <EffectComposer multisampling={4} enableNormalPass>
-      {/* 앰비언트 오클루전 — 접촉 그림자/입체감 (선형 공간) */}
-      <N8AO aoRadius={0.6} distanceFalloff={1} intensity={2} quality="medium" halfRes />
+    <EffectComposer multisampling={2} enableNormalPass={false}>
+      {/* 앰비언트 오클루전 — 접촉 그림자/입체감 (선형 공간, 성능 우선) */}
+      <N8AO
+        aoRadius={0.6}
+        distanceFalloff={1}
+        intensity={2}
+        quality="performance"
+        aoSamples={8}
+        denoiseSamples={4}
+        halfRes
+      />
 
-      {/* 피사계 심도 — 조리개에 연동된 실제 보케 */}
+      {/* 피사계 심도 — 조리개에 연동된 실제 보케 (기본 OFF, 성능) */}
       {dofEnabled && (
         <DepthOfField
           target={[0, 1.2, 0]}
           worldFocusRange={focusRange}
           bokehScale={bokehScale}
-          resolutionScale={1}
+          resolutionScale={0.5}
         />
       )}
 
@@ -69,7 +77,7 @@ export function Effects() {
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
 
       {/* 비네팅 — 렌즈 주변부 감광 */}
-      <Vignette offset={0.28} darkness={0.5} blendFunction={BlendFunction.NORMAL} />
+      <Vignette offset={0.3} darkness={0.38} blendFunction={BlendFunction.NORMAL} />
 
       {/* 필름 그레인 — 센서 노이즈 (미세) */}
       <Noise premultiply blendFunction={BlendFunction.OVERLAY} opacity={0.18} />

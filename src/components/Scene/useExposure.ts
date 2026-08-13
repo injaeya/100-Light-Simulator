@@ -13,7 +13,7 @@ import { useSimulatorStore } from '../../store/simulatorStore';
  * 기본 세팅(f/2.8·1/50·ISO400 + 12000lm 소프트박스 키)에서
  * 피사체가 적정 노출(중간톤)로 오도록 실측 스크린샷으로 맞춘 값.
  */
-export const EXPOSURE_K = 0.15;
+export const EXPOSURE_K = 0.3;
 
 export function useExposure(): number {
   const { aperture, shutter, iso } = useSimulatorStore((s) => s.camera);

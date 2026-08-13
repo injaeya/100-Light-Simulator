@@ -8,6 +8,7 @@ import {
   ContactShadows,
   Environment,
   Lightformer,
+  AdaptiveDpr,
 } from '@react-three/drei';
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 import { fieldOfView } from '../../lib/optics';
@@ -43,10 +44,10 @@ function StudioEnvironment() {
   const exposure = useExposure();
   return (
     <Environment
-      resolution={256}
+      resolution={128}
       frames={1}
       background={false}
-      environmentIntensity={0.12 * exposure}
+      environmentIntensity={0.18 * exposure}
     >
       {/* 상단 대형 소프트 소스 (천장 바운스 근사) */}
       <Lightformer
@@ -87,11 +88,14 @@ export function SceneView() {
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
+      frameloop="demand"
+      dpr={[1, 1.5]}
+      performance={{ min: 0.5 }}
       gl={{
         antialias: true,
         toneMapping: ACESFilmicToneMapping,
         outputColorSpace: SRGBColorSpace,
+        powerPreference: 'high-performance',
       }}
       onPointerMissed={() => selectLight(null)}
     >
@@ -112,19 +116,23 @@ export function SceneView() {
       <Subject />
       <Lights />
 
-      {/* 피사체 접지 그림자 보강 */}
+      {/* 피사체 접지 그림자 보강 (정적 씬이므로 1회 베이크) */}
       <ContactShadows
         position={[0, 0.01, 0]}
         opacity={0.6}
         scale={12}
         blur={2.6}
         far={5}
-        resolution={1024}
+        resolution={512}
+        frames={1}
         color="#000000"
       />
 
       {/* 사진 실사급 포스트프로세싱 */}
       {postFx && <Effects />}
+
+      {/* 인터랙션 중 해상도 자동 저하 → 조작 부드럽게 */}
+      <AdaptiveDpr pixelated />
     </Canvas>
   );
 }

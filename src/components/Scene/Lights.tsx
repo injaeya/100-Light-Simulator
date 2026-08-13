@@ -72,8 +72,8 @@ function LightItem({ light, exposure, showHelpers, selected, onSelect }: LightIt
           intensity={candela}
           decay={2}
           castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
+          shadow-mapSize-width={512}
+          shadow-mapSize-height={512}
           shadow-bias={-0.0005}
         />
       ) : (
@@ -88,8 +88,8 @@ function LightItem({ light, exposure, showHelpers, selected, onSelect }: LightIt
             penumbra={penumbra}
             decay={2}
             castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
+            shadow-mapSize-width={1024}
+            shadow-mapSize-height={1024}
             shadow-bias={-0.0004}
             shadow-normalBias={0.02}
           />
@@ -147,7 +147,7 @@ export function Lights() {
         환경광(바운스 근사). 완전 암부를 막는 미세한 값.
         노출을 곱해 다른 광원과 동일한 스케일 유지.
       */}
-      <ambientLight intensity={6 * exposure} />
+      <ambientLight intensity={10 * exposure} />
       {lights.map((light) => (
         <LightItem
           key={light.id}
