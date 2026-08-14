@@ -165,6 +165,11 @@
 .icon-btn:hover { color: var(--bad); }
 .add-row { display: flex; gap: 6px; align-items: center; }
 .add-row .select { flex: 1; }
+.add-fixtures { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.add-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
+.add-pick { display: flex; align-items: center; gap: 8px; }
+.add-pick .select { flex: 1; }
+.fix-thumb { flex: 0 0 auto; display: block; border-radius: 8px; }
 .light-editor, .win-editor { display: flex; flex-direction: column; gap: 11px; padding-top: 11px; border-top: 1px dashed var(--border-strong); }
 
 /* ---------- Light meter ---------- */
