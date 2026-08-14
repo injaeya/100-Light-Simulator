@@ -66,27 +66,32 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {/* 데스크톱 좌측 — 피사체·공간 먼저, 카메라 다음 */}
-        <aside className="sidebar sidebar-left desktop-only">
-          <PresetPanel />
-          <PlacementPanel />
-          <CameraPanel />
+        {/* 데스크톱 좌측 — 탭으로 넘기며 설정 */}
+        <aside className="sidebar-tabs desktop-only">
+          <div className="tab-rail">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                className={`tab-btn ${tab === t.id ? 'active' : ''}`}
+                onClick={() => setTab(t.id)}
+                type="button"
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="tab-panel">
+            <PanelFor tab={tab} />
+          </div>
         </aside>
 
         <div className="viewport">
           <SceneView />
           {showPlan && <PlanView />}
           <div className="viewport-hint desktop-only">
-            {view === 'free' ? '드래그: 회전 · 휠: 줌' : '촬영뷰 — 카메라 방위/거리/높이는 좌측에서'}
+            {view === 'free' ? '드래그: 회전 · 휠: 줌' : '촬영뷰 — 카메라 방위/거리/높이는 좌측 탭에서'}
           </div>
         </div>
-
-        {/* 데스크톱 우측 */}
-        <aside className="sidebar sidebar-right desktop-only">
-          <LightsPanel />
-          <WindowsPanel />
-          <LightMeter />
-        </aside>
       </main>
 
       {/* 모바일 하단 시트 */}

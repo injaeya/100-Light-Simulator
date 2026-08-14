@@ -36,7 +36,7 @@ export function LightsPanel() {
             className={`light-row ${l.id === selectedLightId ? 'selected' : ''} ${l.on ? '' : 'disabled'}`}
             onClick={() => selectLight(l.id)}
           >
-            <FixtureThumb fix={l.fix} kelvin={l.kelvin} size={30} />
+            <FixtureThumb fix={l.fix} kelvin={l.kelvin} size={50} />
             <span className="light-dot" style={{ background: kelvinCSS(l.kelvin) }} />
             <span className="light-name">{l.name}</span>
             <span className="light-type">{FIXTURES[l.fix].label}</span>
@@ -57,7 +57,7 @@ export function LightsPanel() {
       <div className="add-fixtures">
         <span className="add-label">조명 추가</span>
         <div className="add-pick">
-          <FixtureThumb fix={addFix} size={40} />
+          <FixtureThumb fix={addFix} size={64} />
           <Select options={fixtureOptions} value={addFix} onChange={setAddFix} />
         </div>
         <button className="ghost-btn" type="button" onClick={() => addLight(addFix)}>
@@ -87,7 +87,7 @@ export function LightsPanel() {
           </Field>
           <Field label="기재">
             <div className="add-pick">
-              <FixtureThumb fix={selected.fix} kelvin={selected.kelvin} size={40} />
+              <FixtureThumb fix={selected.fix} kelvin={selected.kelvin} size={64} />
               <Select
                 options={fixtureOptions}
                 value={selected.fix}
