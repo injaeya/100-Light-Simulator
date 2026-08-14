@@ -79,9 +79,10 @@ function makeInitialState(): SimState {
     expo: { iso: 800, shutter: 1 / 50, f: 2.8, nd: 2, wb: 5600 },
     subj: { ...space.subj, pose: lp.subj.pose, eyeH: lp.subj.eyeH },
     room: { ...space.room },
-    env: { ...space.env },
+    // 초기엔 조명 없이 시작 — 구도(피사체·카메라·공간)부터 잡도록 실내등만 소량
+    env: { ...space.env, amb: 90 },
     wins: withIds<WinState>(space.wins()),
-    lights: withIds<LightState>(lp.lights),
+    lights: [],
     stage,
   };
   const fit = fitExposure(base);
@@ -199,7 +200,7 @@ export const useSimulatorStore = create<Store>((set) => ({
   showBeams: true,
   showPlan: true,
   spaceKey: 'studio',
-  lightingKey: 'interview',
+  lightingKey: '',
   theme: initTheme(),
 
   updateCam: (id, patch) =>
@@ -354,8 +355,11 @@ export const useSimulatorStore = create<Store>((set) => ({
 
   applyLighting: (key) =>
     set((s) => {
+      // '조명 없음' — 모든 기재 제거
+      if (!key || !LIGHTING_PRESETS[key]) {
+        return { lights: [], lightingKey: '', selectedLightId: null };
+      }
       const P = LIGHTING_PRESETS[key];
-      if (!P) return s;
       const lp = P.make();
       const A = activeCam(s);
       const lensId = lensForFocal(lp.cam.focal);

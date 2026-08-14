@@ -70,7 +70,10 @@ export interface SubjState {
 export interface RoomState {
   w: number;
   d: number;
+  /** 천장 높이(m) — 바닥(0) 기준 */
   h: number;
+  /** 바닥 단(무대 플랫폼) 높이(m). 0=평바닥. 피사체가 이 위에 올라선다 */
+  riser: number;
   /** 선형 반사율 0..1 */
   albedo: number;
   floor: FloorTex;

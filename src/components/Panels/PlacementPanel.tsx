@@ -14,7 +14,7 @@ export function PlacementPanel() {
   const setEnv = useSimulatorStore((s) => s.setEnv);
 
   return (
-    <Panel title="공간 · 환경">
+    <Panel title="피사체 · 공간" subtitle="피사체 배치 → 카메라 순으로">
       {/* ----- 피사체 ----- */}
       <Field label="자세">
         <Segmented<Pose>
@@ -39,15 +39,18 @@ export function PlacementPanel() {
         <Slider min={0.8} max={1.9} step={0.01} value={subj.eyeH} onChange={(v) => setSubj({ eyeH: v })} />
       </Field>
 
-      {/* ----- 방 ----- */}
-      <Field label="방 너비 w" value={`${room.w.toFixed(1)}m`}>
+      {/* ----- 방(벽·바닥·천장) ----- */}
+      <Field label="벽 너비 w (좌우)" value={`${room.w.toFixed(1)}m`}>
         <Slider min={2} max={16} step={0.1} value={room.w} onChange={(v) => setRoom({ w: v })} />
       </Field>
-      <Field label="방 깊이 d" value={`${room.d.toFixed(1)}m`}>
+      <Field label="벽 깊이 d (앞뒤)" value={`${room.d.toFixed(1)}m`}>
         <Slider min={2} max={20} step={0.1} value={room.d} onChange={(v) => setRoom({ d: v })} />
       </Field>
-      <Field label="방 높이 h" value={`${room.h.toFixed(1)}m`}>
-        <Slider min={2} max={7} step={0.1} value={room.h} onChange={(v) => setRoom({ h: v })} />
+      <Field label="천장 높이" value={`${room.h.toFixed(1)}m`}>
+        <Slider min={2} max={8} step={0.1} value={room.h} onChange={(v) => setRoom({ h: v })} />
+      </Field>
+      <Field label="바닥 단 높이" value={room.riser > 0.005 ? `${room.riser.toFixed(2)}m` : '평바닥'}>
+        <Slider min={0} max={1.2} step={0.02} value={room.riser} onChange={(v) => setRoom({ riser: v })} />
       </Field>
       <Field label="반사율 albedo" value={room.albedo.toFixed(2)}>
         <Slider min={0.05} max={0.9} step={0.01} value={room.albedo} onChange={(v) => setRoom({ albedo: v })} />

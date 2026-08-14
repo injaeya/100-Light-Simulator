@@ -13,8 +13,8 @@ import './App.css';
 type Tab = 'preset' | 'camera' | 'space' | 'lights' | 'windows' | 'meter';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'preset', label: '프리셋' },
-  { id: 'camera', label: '카메라' },
   { id: 'space', label: '공간' },
+  { id: 'camera', label: '카메라' },
   { id: 'lights', label: '조명' },
   { id: 'windows', label: '창문' },
   { id: 'meter', label: '미터' },
@@ -66,11 +66,11 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {/* 데스크톱 좌측 */}
+        {/* 데스크톱 좌측 — 피사체·공간 먼저, 카메라 다음 */}
         <aside className="sidebar sidebar-left desktop-only">
           <PresetPanel />
-          <CameraPanel />
           <PlacementPanel />
+          <CameraPanel />
         </aside>
 
         <div className="viewport">

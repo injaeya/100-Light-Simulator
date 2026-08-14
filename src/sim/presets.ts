@@ -137,35 +137,35 @@ export interface SpacePreset {
 export const SPACE_PRESETS: Record<string, SpacePreset> = {
   studio: {
     label: '소형 스튜디오',
-    room: { w: 5, d: 7, h: 2.9, albedo: 0.16, floor: 'concrete', props: 0 },
+    room: { w: 5, d: 7, h: 2.9, riser: 0, albedo: 0.16, floor: 'concrete', props: 0 },
     env: { mode: 'day', time: 14, sky: 'overcast', amb: 0, orient: 180, season: 'mid' },
     subj: { x: 0, z: -0.6, yaw: 0, pose: 'sit', eyeH: 1.28 },
     wins: () => [],
   },
   office: {
     label: '사무실 · 회의실',
-    room: { w: 6.5, d: 9, h: 2.7, albedo: 0.62, floor: 'carpet', props: 1 },
+    room: { w: 6.5, d: 9, h: 2.7, riser: 0, albedo: 0.62, floor: 'carpet', props: 1 },
     env: { mode: 'day', time: 13, sky: 'cloud', amb: 180, orient: 90, season: 'mid' },
     subj: { x: 0.4, z: -1.2, yaw: 0, pose: 'sit', eyeH: 1.26 },
     wins: () => [W({ wall: 'left', u: 0, w: 3.2, h: 1.5, sill: 0.95, curtain: 100 })],
   },
   cafe: {
     label: '카페 창가',
-    room: { w: 4.2, d: 7, h: 2.8, albedo: 0.42, floor: 'wood', props: 1 },
+    room: { w: 4.2, d: 7, h: 2.8, riser: 0, albedo: 0.42, floor: 'wood', props: 1 },
     env: { mode: 'day', time: 10.5, sky: 'clear', amb: 60, orient: 180, season: 'mid' },
     subj: { x: -0.9, z: -0.5, yaw: 34, pose: 'sit', eyeH: 1.24 },
     wins: () => [W({ wall: 'left', u: 0, w: 2.4, h: 1.8, sill: 0.75, curtain: 70 })],
   },
   bridal: {
     label: '신부대기실',
-    room: { w: 5.5, d: 6.5, h: 2.8, albedo: 0.74, floor: 'tile', props: 1 },
+    room: { w: 5.5, d: 6.5, h: 2.8, riser: 0, albedo: 0.74, floor: 'tile', props: 1 },
     env: { mode: 'day', time: 12, sky: 'clear', amb: 120, orient: 135, season: 'mid' },
     subj: { x: 0, z: -0.8, yaw: 0, pose: 'sit', eyeH: 1.3 },
     wins: () => [W({ wall: 'right', u: 0.4, w: 2.0, h: 1.7, sill: 0.85, curtain: 60 })],
   },
   church: {
     label: '예배당 본당',
-    room: { w: 14, d: 19, h: 6.8, albedo: 0.44, floor: 'wood', props: 0 },
+    room: { w: 14, d: 19, h: 6.8, riser: 0, albedo: 0.44, floor: 'wood', props: 0 },
     env: { mode: 'day', time: 11, sky: 'clear', amb: 140, orient: 180, season: 'mid' },
     subj: { x: 0, z: -6.2, yaw: 0, pose: 'stand', eyeH: 1.62 },
     wins: () => [
@@ -177,7 +177,7 @@ export const SPACE_PRESETS: Record<string, SpacePreset> = {
   },
   hall: {
     label: '연회장 / 홀',
-    room: { w: 12, d: 16, h: 4.4, albedo: 0.28, floor: 'carpet', props: 1 },
+    room: { w: 12, d: 16, h: 4.4, riser: 0, albedo: 0.28, floor: 'carpet', props: 1 },
     env: { mode: 'night', time: 19, sky: 'clear', amb: 70, orient: 270, season: 'mid' },
     subj: { x: 0, z: -3.2, yaw: 0, pose: 'stand', eyeH: 1.6 },
     wins: () => [],

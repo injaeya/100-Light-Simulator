@@ -21,10 +21,13 @@ export function PresetPanel() {
     value: k,
     label: SPACE_PRESETS[k].label,
   }));
-  const lightingOptions = Object.keys(LIGHTING_PRESETS).map((k) => ({
-    value: k,
-    label: LIGHTING_PRESETS[k].label,
-  }));
+  const lightingOptions = [
+    { value: '', label: '조명 없음' },
+    ...Object.keys(LIGHTING_PRESETS).map((k) => ({
+      value: k,
+      label: LIGHTING_PRESETS[k].label,
+    })),
+  ];
 
   return (
     <Panel title="프리셋">

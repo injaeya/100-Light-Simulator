@@ -31,13 +31,14 @@ export const camPos = (s: SimState, C: CamState) =>
 
 /** 카메라 C 의 조준 타깃 (free=월드타깃 / subj=스테이지 눈높이) */
 export const camAim = (s: SimState, C: CamState) =>
-  C.aim === 'free' ? V3(C.tx, C.ty, C.tz) : V3(s.stage.x, s.subj.eyeH, s.stage.z);
+  C.aim === 'free' ? V3(C.tx, C.ty, C.tz) : V3(s.stage.x, s.room.riser + s.subj.eyeH, s.stage.z);
 
 /** 활성 카메라 위치(하위호환) */
 export const camP = (s: SimState) => camPos(s, activeCam(s));
-export const faceC = (s: SimState) => V3(s.subj.x, s.subj.eyeH, s.subj.z);
+/** 피사체 얼굴(월드). 바닥 단(riser) 위에 올라선 높이 */
+export const faceC = (s: SimState) => V3(s.subj.x, s.room.riser + s.subj.eyeH, s.subj.z);
 /** 조명 조준 기준점(고정 스테이지, 눈높이). 피사체 이동과 무관하게 조명 각도 유지 */
-export const stageFace = (s: SimState) => V3(s.stage.x, s.subj.eyeH, s.stage.z);
+export const stageFace = (s: SimState) => V3(s.stage.x, s.room.riser + s.subj.eyeH, s.stage.z);
 export const normalAt = (s: SimState, d: number) => DIR(s.subj.yaw + d);
 /**
  * 조명 월드 위치.
@@ -83,7 +84,7 @@ export function bgPoint(s: SimState): Vector3 {
   if (Math.abs(d.x) > 1e-4) t = Math.min(t, ((d.x > 0 ? R.w / 2 : -R.w / 2) - p.x) / d.x);
   if (Math.abs(d.z) > 1e-4) t = Math.min(t, ((d.z > 0 ? R.d / 2 : -R.d / 2) - p.z) / d.z);
   if (!isFinite(t) || t < 0) t = 1;
-  return p.clone().addScaledVector(d, Math.max(0.25, t - 0.1)).setY(s.subj.eyeH * 0.88);
+  return p.clone().addScaledVector(d, Math.max(0.25, t - 0.1)).setY(s.room.riser + s.subj.eyeH * 0.88);
 }
 
 export const WALLNAME: Record<WallId, string> = { left: '좌', right: '우', back: '뒤', front: '앞' };
