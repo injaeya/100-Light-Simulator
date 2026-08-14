@@ -7,7 +7,7 @@ import type { LightState, SimState } from './types';
 import { FIXTURES } from './fixtures';
 import { MODIFIERS } from './modifiers';
 import { faceC, lightAim, lightVec, nearestStop, normalAt } from './coords';
-import { sunHitsFace, windowData, type WindowData } from './daylight';
+import { sunFaceFactor, windowData, type WindowData } from './daylight';
 
 /** 기재 유효 광도(cd) = cd × mult × dim% */
 export const effCd = (L: LightState) => FIXTURES[L.fix].cd * MODIFIERS[L.mod].mult * (L.dim / 100);
@@ -55,8 +55,9 @@ export function sources(s: SimState): { list: Source[]; wd: WindowData } {
   for (const w of wd.wins)
     if (w.I > 0.5)
       out.push({ kind: 'win', name: w.name, ref: w.W, pos: w.pos, I: w.I, M: w.M, size: w.size, k: w.k });
-  if (wd.sunLux > 10 && sunHitsFace(s, wd.sv))
-    out.push({ kind: 'sun', name: '직사광', dir: wd.sv, E: wd.sunLux, size: 0.01, k: wd.sk.sunK });
+  const sunF = sunFaceFactor(s, wd.sv);
+  if (wd.sunLux > 10 && sunF > 0)
+    out.push({ kind: 'sun', name: '직사광', dir: wd.sv, E: wd.sunLux * sunF, size: 0.01, k: wd.sk.sunK });
   return { list: out, wd };
 }
 

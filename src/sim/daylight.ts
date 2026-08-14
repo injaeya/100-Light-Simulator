@@ -72,7 +72,9 @@ export interface WindowData {
 /** 창문별 확산 광량(cd 등가) + 직사 통과 여부 */
 export function windowData(s: SimState): WindowData {
   const sk = skyState(s), sv = sunVec(s), out: WinLight[] = [];
-  let sunFactor = 0;
+  // 창을 통과하는 실제 직사 조도(입사각·커튼 반영). 예전엔 dn 전량을 계단식으로 써
+  // orient 변화 시 특정 구간에서 화면이 급격히 백화됐다 → 입사각(cosInc)에 비례하게.
+  let sunEnter = 0;
   const ws = walls(s.room, s.env.orient);
   for (const W of s.wins) {
     if (!W.on) continue;
@@ -87,15 +89,21 @@ export function windowData(s: SimState): WindowData {
       pos: winCenter(W, s.room, s.env.orient).addScaledVector(wl.n, 0.04),
       size: Math.sqrt(A), name: '창 ' + WALLNAME[W.wall], k: sk.skyK, edir: Edir,
     });
-    if (Edir > 0) sunFactor = Math.max(sunFactor, cur);
+    if (Edir > 0) sunEnter = Math.max(sunEnter, Edir * cur);
   }
-  return { wins: out, sunLux: sk.dn * GLASS * sunFactor, sk, sv };
+  return { wins: out, sunLux: sunEnter * GLASS, sk, sv };
 }
 
-/** 얼굴이 실제 직사광 패치 안에 드는가 */
-export function sunHitsFace(s: SimState, sv: Vector3): boolean {
-  if (!s.wins.length) return false;
-  const p = new Vector3(0, s.subj.eyeH, 0), ws = walls(s.room, s.env.orient);
+/**
+ * 얼굴이 직사광 패치 안에 드는 정도(0..1).
+ * 창 개구부 가장자리에서 soft margin 으로 램프 → orient/시간 변화 시 급격한 on/off 방지.
+ */
+export function sunFaceFactor(s: SimState, sv: Vector3): number {
+  if (!s.wins.length) return 0;
+  const p = new Vector3(s.subj.x, s.room.riser + s.subj.eyeH, s.subj.z);
+  const ws = walls(s.room, s.env.orient);
+  const mgn = 0.3; // 개구부 안쪽 여유(m)
+  let best = 0;
   for (const W of s.wins) {
     if (!W.on || W.curtain < 5) continue;
     const wl = ws[W.wall];
@@ -105,7 +113,11 @@ export function sunHitsFace(s: SimState, sv: Vector3): boolean {
     if (t <= 0) continue;
     const hit = p.clone().addScaledVector(sv, t).sub(wl.origin);
     const u = hit.dot(wl.uDir), v = hit.y;
-    if (Math.abs(u - W.u) <= W.w / 2 && v >= W.sill && v <= W.sill + W.h) return true;
+    const du = W.w / 2 - Math.abs(u - W.u);
+    const dv = Math.min(v - W.sill, W.sill + W.h - v);
+    const fu = clamp(du / mgn, 0, 1);
+    const fv = clamp(dv / mgn, 0, 1);
+    best = Math.max(best, fu * fv);
   }
-  return false;
+  return best;
 }
