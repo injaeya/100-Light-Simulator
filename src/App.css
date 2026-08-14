@@ -169,7 +169,7 @@
 .add-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
 .add-pick { display: flex; align-items: center; gap: 8px; }
 .add-pick .select { flex: 1; }
-.fix-thumb { flex: 0 0 auto; display: block; border-radius: 8px; }
+.fix-thumb { flex: 0 0 auto; display: block; border-radius: 8px; object-fit: contain; background: #f4f5f7; border: 1px solid rgba(0,0,0,0.14); }
 .light-editor, .win-editor { display: flex; flex-direction: column; gap: 11px; padding-top: 11px; border-top: 1px dashed var(--border-strong); }
 
 /* ---------- Light meter ---------- */

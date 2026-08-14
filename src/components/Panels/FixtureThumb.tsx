@@ -1,8 +1,9 @@
 /**
- * FixtureThumb.tsx — 조명 기재 제품 썸네일(SVG).
- * 실제 제품 사진은 저작권/오프라인 문제로 번들하지 않고, 기재 종류(kind)별
- * 제품 실루엣 + 브랜드 색 + 색온도 발광면으로 "어떤 제품인지" 알아볼 수 있게 그린다.
+ * FixtureThumb.tsx — 조명 기재 제품 썸네일.
+ * public/fixtures/<key>.jpg 의 실제 제품 사진을 우선 사용하고,
+ * 로드 실패 시 기재 종류(kind)별 제품 실루엣 SVG로 폴백한다.
  */
+import { useState } from 'react';
 import { FIXTURES } from '../../sim/fixtures';
 import { kelvinCSS } from '../../sim/kelvin';
 
@@ -22,11 +23,27 @@ const CHIP = '#dfe1e6';
 
 export function FixtureThumb({ fix, kelvin, size = 34 }: { fix: string; kelvin?: number; size?: number }) {
   const F = FIXTURES[fix];
+  const [imgErr, setImgErr] = useState(false);
   if (!F) return null;
   const k = kelvin ?? Math.round((F.cct[0] + F.cct[1]) / 2);
   const glow = kelvinCSS(k);
   const brand = brandColor(F.label);
 
+  // 실제 제품 사진(public/fixtures/<key>.jpg) 우선
+  if (!imgErr) {
+    return (
+      <img
+        className="fix-thumb"
+        src={`${import.meta.env.BASE_URL}fixtures/${fix}.jpg`}
+        width={size}
+        height={size}
+        alt={F.label}
+        loading="lazy"
+        onError={() => setImgErr(true)}
+      />
+    );
+  }
+  // 폴백: 종류별 실루엣 SVG
   return (
     <svg width={size} height={size} viewBox="0 0 44 44" className="fix-thumb" aria-hidden>
       <rect x="0.5" y="0.5" width="43" height="43" rx="8" fill={CHIP} stroke="rgba(0,0,0,0.18)" />
