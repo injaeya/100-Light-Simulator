@@ -29,6 +29,10 @@ export function PlanView() {
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<Drag>(null);
+  // 모바일에선 기본 접힘(작은 캔버스를 덜 가리게)
+  const [collapsed, setCollapsed] = useState(
+    () => typeof matchMedia !== 'undefined' && matchMedia('(max-width: 900px)').matches,
+  );
 
   // 월드(x,z) → SVG. -z(뒷벽)=위, +z(앞/카메라)=아래.
   const s = Math.min((BOX_W - 2 * PAD) / room.w, (BOX_H - 2 * PAD) / room.d);
@@ -74,11 +78,13 @@ export function PlanView() {
   };
 
   return (
-    <div className="plan-view">
-      <div className="plan-head">
+    <div className={`plan-view ${collapsed ? 'collapsed' : ''}`}>
+      <button className="plan-head" type="button" onClick={() => setCollapsed((c) => !c)} aria-expanded={!collapsed}>
         <span>배치도 (상부)</span>
-        <span className="plan-sub">뒷벽 ▲</span>
-      </div>
+        <span className="plan-sub">{collapsed ? '▸ 펼치기' : '뒷벽 ▲'}</span>
+      </button>
+      {!collapsed && (
+      <>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${BOX_W} ${BOX_H}`}
@@ -199,6 +205,8 @@ export function PlanView() {
         <span><i className="lg lg-stage" />조준</span>
         <span><i className="lg lg-cam" />카메라</span>
       </div>
+      </>
+      )}
     </div>
   );
 }

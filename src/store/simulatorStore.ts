@@ -19,6 +19,16 @@ import { FIXTURES } from '../sim/fixtures';
 import { modsFor } from '../sim/modifiers';
 import { clampAperture, clampFocal, getLens, lensForFocal } from '../sim/lenses';
 import { activeCam, camAim, camPos, lightAim, lightVec } from '../sim/coords';
+import {
+  PERSIST_V,
+  clearShareHash,
+  hydrateSim,
+  loadBoot,
+  maxId,
+  saveAutosave,
+  type Persisted,
+  type PersistedUI,
+} from './persist';
 
 export type ViewMode = 'cam' | 'free';
 export type Theme = 'light' | 'dark';
@@ -67,8 +77,8 @@ function makeCam(
   };
 }
 
-/** 기본 상태 = 스튜디오 공간 + 인터뷰 조명 */
-function makeInitialState(): SimState {
+/** 기본 상태(로드 없음) = 스튜디오 공간 + 조명 없음 */
+function freshInitialState(): SimState {
   const space = SPACE_PRESETS.studio;
   const lp = LIGHTING_PRESETS.interview.make();
   const stage = { x: space.subj.x, z: space.subj.z };
@@ -89,6 +99,21 @@ function makeInitialState(): SimState {
   base.expo.nd = fit.nd;
   base.expo.f = clampAperture(getLens(cam0.lens), cam0.focal, fit.f);
   return base;
+}
+
+/** 부팅 복원 데이터(URL 공유 해시 > 자동저장). 모듈 로드 시 1회 읽음 */
+const BOOT = loadBoot();
+// 공유 링크로 열었으면 적용 후 해시 정리(이후엔 자동저장이 관장)
+if (BOOT?.fromShare) clearShareHash();
+
+/** 초기 상태 = 복원본(있으면) 아니면 기본값. 복원 시 uid 카운터 재조정 */
+function makeInitialState(): SimState {
+  if (BOOT) {
+    const sim = hydrateSim(BOOT.p.sim, freshInitialState());
+    uid = Math.max(uid, maxId(sim) + 1);
+    return sim;
+  }
+  return freshInitialState();
 }
 
 interface UIState {
@@ -140,6 +165,11 @@ interface Actions {
   applyLighting: (key: string) => void;
   applySpace: (key: string) => void;
   fitExposureNow: () => void;
+
+  /** 저장/공유 데이터를 상태에 적용(불러오기·가져오기·공유 링크) */
+  applyPersisted: (p: Persisted) => void;
+  /** 새 프로젝트 — 기본값으로 초기화 */
+  resetProject: () => void;
 
   setView: (v: ViewMode) => void;
   toggleHelpers: () => void;
@@ -196,15 +226,15 @@ function clampPlacement(s: SimState) {
 
 export const useSimulatorStore = create<Store>((set) => ({
   ...makeInitialState(),
-  view: 'free',
+  view: BOOT?.p.ui?.view ?? 'free',
   selectedLightId: null,
   selectedWinId: null,
-  showHelpers: true,
-  showBeams: true,
-  showPlan: true,
-  showMeter: true,
-  spaceKey: 'studio',
-  lightingKey: '',
+  showHelpers: BOOT?.p.ui?.showHelpers ?? true,
+  showBeams: BOOT?.p.ui?.showBeams ?? true,
+  showPlan: BOOT?.p.ui?.showPlan ?? true,
+  showMeter: BOOT?.p.ui?.showMeter ?? true,
+  spaceKey: BOOT?.p.ui?.spaceKey ?? 'studio',
+  lightingKey: BOOT?.p.ui?.lightingKey ?? '',
   theme: initTheme(),
 
   updateCam: (id, patch) =>
@@ -426,6 +456,33 @@ export const useSimulatorStore = create<Store>((set) => ({
       return { expo: { ...s.expo, nd: fit.nd, f: clampAperture(L, A.focal, fit.f) } };
     }),
 
+  applyPersisted: (p) =>
+    set((s) => {
+      const sim = hydrateSim(p.sim, freshInitialState());
+      uid = Math.max(uid, maxId(sim) + 1);
+      const ui = p.ui ?? {};
+      return {
+        ...sim,
+        view: ui.view ?? s.view,
+        showHelpers: ui.showHelpers ?? s.showHelpers,
+        showBeams: ui.showBeams ?? s.showBeams,
+        showPlan: ui.showPlan ?? s.showPlan,
+        showMeter: ui.showMeter ?? s.showMeter,
+        spaceKey: ui.spaceKey ?? s.spaceKey,
+        lightingKey: ui.lightingKey ?? s.lightingKey,
+        selectedLightId: null,
+        selectedWinId: null,
+      };
+    }),
+  resetProject: () =>
+    set({
+      ...freshInitialState(),
+      spaceKey: 'studio',
+      lightingKey: '',
+      selectedLightId: null,
+      selectedWinId: null,
+    }),
+
   setView: (v) => set({ view: v }),
   toggleHelpers: () => set((s) => ({ showHelpers: !s.showHelpers })),
   toggleBeams: () => set((s) => ({ showBeams: !s.showBeams })),
@@ -457,3 +514,28 @@ export function pickSimState(s: Store): SimState {
     stage: s.stage,
   };
 }
+
+/** 저장 대상 UI 토글만 추출 */
+export function pickUI(s: Store): PersistedUI {
+  return {
+    view: s.view,
+    showHelpers: s.showHelpers,
+    showBeams: s.showBeams,
+    showPlan: s.showPlan,
+    showMeter: s.showMeter,
+    spaceKey: s.spaceKey,
+    lightingKey: s.lightingKey,
+  };
+}
+
+/** 현재 스토어 → 저장 페이로드 */
+export function toPersisted(s: Store): Persisted {
+  return { v: PERSIST_V, sim: pickSimState(s), ui: pickUI(s) };
+}
+
+/* 자동 저장 — 상태 변경 시 디바운스(500ms)로 localStorage 기록 */
+let autosaveTimer: ReturnType<typeof setTimeout> | undefined;
+useSimulatorStore.subscribe((s) => {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => saveAutosave(toPersisted(s)), 500);
+});

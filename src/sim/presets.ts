@@ -8,7 +8,7 @@ import type { LightState, Pose, SimState, WinState } from './types';
 export type LightSpec = Omit<LightState, 'id'>;
 export type WinSpec = Omit<WinState, 'id'>;
 
-const L = (o: Partial<LightSpec>): LightSpec => ({
+export const L = (o: Partial<LightSpec>): LightSpec => ({
   on: true,
   name: '라이트',
   fix: 'am200x',
@@ -29,7 +29,7 @@ const L = (o: Partial<LightSpec>): LightSpec => ({
   ...o,
 });
 
-const W = (o: Partial<WinSpec>): WinSpec => ({
+export const W = (o: Partial<WinSpec>): WinSpec => ({
   on: true,
   wall: 'left',
   u: 0,

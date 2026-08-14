@@ -4,6 +4,7 @@
 import { useSimulatorStore } from '../../store/simulatorStore';
 import { LIGHTING_PRESETS, SPACE_PRESETS } from '../../sim/presets';
 import { Panel, Field, Select } from './controls';
+import { ProjectSection } from './ProjectPanel';
 
 export function PresetPanel() {
   const spaceKey = useSimulatorStore((s) => s.spaceKey);
@@ -32,7 +33,8 @@ export function PresetPanel() {
   ];
 
   return (
-    <Panel title="프리셋">
+    <Panel title="프리셋" subtitle="자동 저장됨 · 프로젝트 저장/공유 가능">
+      <ProjectSection />
       <Field label="공간">
         <Select options={spaceOptions} value={spaceKey} onChange={applySpace} />
       </Field>

@@ -1,7 +1,7 @@
 /**
  * LightMeter.tsx — analyze() 결과를 실시간 표시하는 노출계/측광 미터
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSim } from '../../store/useSim';
 import { analyze } from '../../sim/photometry';
 import { FIXTURES } from '../../sim/fixtures';
@@ -116,13 +116,17 @@ export function LightMeter() {
 
 /** 뷰포트 오버레이(배치도처럼 떠 있는 미터 카드) */
 export function MeterOverlay() {
+  // 모바일에선 기본 접힘
+  const [collapsed, setCollapsed] = useState(
+    () => typeof matchMedia !== 'undefined' && matchMedia('(max-width: 900px)').matches,
+  );
   return (
-    <div className="meter-overlay">
-      <div className="plan-head">
+    <div className={`meter-overlay ${collapsed ? 'collapsed' : ''}`}>
+      <button className="plan-head" type="button" onClick={() => setCollapsed((c) => !c)} aria-expanded={!collapsed}>
         <span>라이트 미터</span>
-        <span className="plan-sub">실시간 노출계</span>
-      </div>
-      <MeterBody max={4} />
+        <span className="plan-sub">{collapsed ? '▸ 펼치기' : '실시간 노출계'}</span>
+      </button>
+      {!collapsed && <MeterBody max={4} />}
     </div>
   );
 }
