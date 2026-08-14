@@ -18,7 +18,8 @@ function softLabel(soft: number): string {
   return '단단함';
 }
 
-export function LightMeter() {
+/** 미터 본문(그리드 + 광원 기여). Panel/오버레이 공용. max: 광원 표시 개수 제한 */
+function MeterBody({ max }: { max?: number }) {
   const sim = useSim();
   const a = useMemo(() => analyze(sim), [sim]);
 
@@ -34,8 +35,11 @@ export function LightMeter() {
         ? a.key.name
         : '-';
 
+  const sorted = a.src.slice().sort((x, y) => (y.lux || 0) - (x.lux || 0));
+  const shown = max ? sorted.slice(0, max) : sorted;
+
   return (
-    <Panel title="라이트 미터" subtitle="실시간 측광 · 노출계">
+    <>
       <div className="meter-grid">
         <div className="meter-cell">
           <span className="meter-k">얼굴 조도</span>
@@ -76,29 +80,49 @@ export function LightMeter() {
           <span>얼굴 조도</span>
         </div>
         {a.src.length === 0 && <p className="hint">켜진 광원이 없습니다.</p>}
-        {a.src
-          .slice()
-          .sort((x, y) => (y.lux || 0) - (x.lux || 0))
-          .map((s, i) => {
-            const isFix = s.kind === 'fix';
-            const L = isFix ? (s.ref as LightState) : null;
-            const sub = L ? `${FIXTURES[L.fix].label.split(' ')[0]} · ${MODIFIERS[L.mod].label}` : s.kind === 'win' ? '창광' : '직사광';
-            const share = a.front > 0 ? Math.min(100, ((s.lux || 0) / a.front) * 100) : 0;
-            return (
-              <div className="meter-src" key={i}>
-                <span className="meter-src-dot" style={{ background: kelvinCSS(s.k) }} />
-                <div className="meter-src-info">
-                  <span className="meter-src-name">{s.name}</span>
-                  <span className="meter-src-sub">{sub}</span>
-                </div>
-                <div className="meter-src-bar">
-                  <div className="meter-src-fill" style={{ width: `${share}%`, background: kelvinCSS(s.k) }} />
-                </div>
-                <span className="meter-src-lux">{Math.round(s.lux || 0).toLocaleString()}</span>
+        {shown.map((s, i) => {
+          const isFix = s.kind === 'fix';
+          const L = isFix ? (s.ref as LightState) : null;
+          const sub = L ? `${FIXTURES[L.fix].label.split(' ')[0]} · ${MODIFIERS[L.mod].label}` : s.kind === 'win' ? '창광' : '직사광';
+          const share = a.front > 0 ? Math.min(100, ((s.lux || 0) / a.front) * 100) : 0;
+          return (
+            <div className="meter-src" key={i}>
+              <span className="meter-src-dot" style={{ background: kelvinCSS(s.k) }} />
+              <div className="meter-src-info">
+                <span className="meter-src-name">{s.name}</span>
+                <span className="meter-src-sub">{sub}</span>
               </div>
-            );
-          })}
+              <div className="meter-src-bar">
+                <div className="meter-src-fill" style={{ width: `${share}%`, background: kelvinCSS(s.k) }} />
+              </div>
+              <span className="meter-src-lux">{Math.round(s.lux || 0).toLocaleString()}</span>
+            </div>
+          );
+        })}
+        {max && sorted.length > max && <p className="hint">외 {sorted.length - max}개 — 미터 탭에서 전체 보기</p>}
       </div>
+    </>
+  );
+}
+
+/** 미터 탭 패널 */
+export function LightMeter() {
+  return (
+    <Panel title="라이트 미터" subtitle="실시간 측광 · 노출계">
+      <MeterBody />
     </Panel>
+  );
+}
+
+/** 뷰포트 오버레이(배치도처럼 떠 있는 미터 카드) */
+export function MeterOverlay() {
+  return (
+    <div className="meter-overlay">
+      <div className="plan-head">
+        <span>라이트 미터</span>
+        <span className="plan-sub">실시간 노출계</span>
+      </div>
+      <MeterBody max={4} />
+    </div>
   );
 }

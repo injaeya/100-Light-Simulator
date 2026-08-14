@@ -5,7 +5,7 @@ import { CameraPanel } from './components/Panels/CameraPanel';
 import { PlacementPanel } from './components/Panels/PlacementPanel';
 import { LightsPanel } from './components/Panels/LightsPanel';
 import { WindowsPanel } from './components/Panels/WindowsPanel';
-import { LightMeter } from './components/Panels/LightMeter';
+import { LightMeter, MeterOverlay } from './components/Panels/LightMeter';
 import { PlanView } from './components/Panels/PlanView';
 import { useSimulatorStore } from './store/simulatorStore';
 import './App.css';
@@ -37,6 +37,7 @@ export default function App() {
   const theme = useSimulatorStore((s) => s.theme);
   const toggleTheme = useSimulatorStore((s) => s.toggleTheme);
   const showPlan = useSimulatorStore((s) => s.showPlan);
+  const showMeter = useSimulatorStore((s) => s.showMeter);
   const [tab, setTab] = useState<Tab>('preset');
   const [expanded, setExpanded] = useState(true);
 
@@ -87,6 +88,7 @@ export default function App() {
 
         <div className="viewport">
           <SceneView />
+          {showMeter && <MeterOverlay />}
           {showPlan && <PlanView />}
           <div className="viewport-hint desktop-only">
             {view === 'free' ? '드래그: 회전 · 휠: 줌' : '촬영뷰 — 카메라 방위/거리/높이는 좌측 탭에서'}

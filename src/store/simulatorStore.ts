@@ -100,6 +100,8 @@ interface UIState {
   showBeams: boolean;
   /** 상부 배치도(플랜뷰) 표시 */
   showPlan: boolean;
+  /** 라이트 미터 오버레이 표시 */
+  showMeter: boolean;
   spaceKey: string;
   lightingKey: string;
   theme: Theme;
@@ -143,6 +145,7 @@ interface Actions {
   toggleHelpers: () => void;
   toggleBeams: () => void;
   togglePlan: () => void;
+  toggleMeter: () => void;
   toggleTheme: () => void;
 }
 
@@ -199,6 +202,7 @@ export const useSimulatorStore = create<Store>((set) => ({
   showHelpers: true,
   showBeams: true,
   showPlan: true,
+  showMeter: true,
   spaceKey: 'studio',
   lightingKey: '',
   theme: initTheme(),
@@ -426,6 +430,7 @@ export const useSimulatorStore = create<Store>((set) => ({
   toggleHelpers: () => set((s) => ({ showHelpers: !s.showHelpers })),
   toggleBeams: () => set((s) => ({ showBeams: !s.showBeams })),
   togglePlan: () => set((s) => ({ showPlan: !s.showPlan })),
+  toggleMeter: () => set((s) => ({ showMeter: !s.showMeter })),
   toggleTheme: () =>
     set((s) => {
       const theme: Theme = s.theme === 'dark' ? 'light' : 'dark';
